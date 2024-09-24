@@ -66,6 +66,9 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   bh1745.measurement_time_ms(160)
   r, g, b, c = bh1745.rgbc_raw()
 
+  # Calculate dew point using helpers
+  dew_point = helpers.calculate_dew_point(temperature, humidity)
+  
   from ucollections import OrderedDict
   return OrderedDict({
     "temperature": temperature,
@@ -74,5 +77,6 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     "gas_resistance": gas_resistance,
     "aqi": aqi,
     "luminance": lux_from_rgbc(r, g, b, c),
-    "color_temperature": colour_temperature_from_rgbc(r, g, b, c)
+    "color_temperature": colour_temperature_from_rgbc(r, g, b, c),
+    "dew_point": round(dew_point, 2)
   })
