@@ -1,6 +1,7 @@
 import time
 from breakout_bme280 import BreakoutBME280
 from breakout_ltr559 import BreakoutLTR559
+from breakout_bme68x import BreakoutBME68X
 from machine import Pin, PWM
 from enviro import i2c
 from phew import logging
@@ -8,6 +9,7 @@ import enviro.helpers as helpers  # Import helpers functions for calculations
 
 CHANNEL_NAMES = ['A', 'B', 'C']
 
+# Initialize onboard sensors
 bme280 = BreakoutBME280(i2c, 0x77)
 ltr559 = BreakoutLTR559(i2c)
 
@@ -24,6 +26,9 @@ pump_pins = [
   Pin(11, Pin.OUT, value=0),
   Pin(10, Pin.OUT, value=0)
 ]
+
+# Initialize external BME688 sensor
+bme688 = BreakoutBME68X(i2c, address=0x76)
 
 def moisture_readings():
   results = []
@@ -106,24 +111,63 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   time.sleep(0.1)
   bme280_data = bme280.read()
 
+  # Read from external BME688 sensor
+  bme688_data = bme688.read()
+  
   ltr_data = ltr559.get_reading()
 
   moisture_levels = moisture_readings()
 
   water(moisture_levels) # run pumps if needed
 
+  # Read temperature, humidity, and pressure
+  temperature = bme280_data[0]
+  humidity = bme280_data[2]
+  pressure = bme280_data[1] / 100.0  # Convert pressure from Pa to hPa
+
+  # Read from external BME688 sensor
+  ext_temperature = bme688_data[0]
+  ext_humidity = bme688_data[2]
+  ext_pressure = round(bme688_data[1] / 100.0, 2)
+  ext_gas_resistance = round(bme688_data[3])
+  # an approximate air quality calculation that accounts for the effect of
+  # humidity on the gas sensor
+  # https://forums.pimoroni.com/t/bme680-observed-gas-ohms-readings/6608/25
+  ext_aqi = round(math.log(ext_gas_resistance) + 0.04 * ext_humidity, 1)
+  
+  # Calculate external absolute humidity using helpers
+  ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature)
+
+  # Calculate predicted rel. humidity after venting using helpers
+  calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature)
+
+  # Calculate delta rel. humidity before/after venting using helpers
+  delta_humidity = calc_humidity - humidity
+  
   # Calculate dew point using helpers
   dew_point = helpers.calculate_dew_point(temperature, humidity)
 
+  # Calculate ext_dew point using helpers
+  ext_dew_point = helpers.calculate_dew_point(ext_temperature, ext_humidity)
+  
   from ucollections import OrderedDict
   return OrderedDict({
-    "temperature": round(bme280_data[0], 2),
-    "humidity": round(bme280_data[2], 2),
-    "pressure": round(bme280_data[1] / 100.0, 2),
+    "temperature": round(temperature, 2),
+    "humidity": round(humidity, 2),
+    "pressure": round(pressure, 2),
     "luminance": round(ltr_data[BreakoutLTR559.LUX], 2),
     "moisture_a": round(moisture_levels[0], 2),
     "moisture_b": round(moisture_levels[1], 2),
-    "moisture_c": round(moisture_levels[2], 2)
+    "moisture_c": round(moisture_levels[2], 2),
+    "dew_point": round(dew_point, 2),
+    "ext_temperature": round(ext_temperature, 2),
+    "ext_humidity": round(ext_humidity, 2),
+    "ext_pressure": ext_pressure,
+    "ext_gas_resistance": ext_gas_resistance,
+    "ext_aqi": ext_aqi,
+    "ext_dew_point": round(ext_dew_point, 2),
+    "calc_humidity": round(calc_humidity, 2),
+    "delta_humidity": round(delta_humidity, 2)
   })
   
 def play_tone(frequency = None):
