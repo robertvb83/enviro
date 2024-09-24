@@ -112,18 +112,24 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
   water(moisture_levels) # run pumps if needed
 
+  # Read temperature, humidity, and pressure
+  temperature = bme280_data[0]
+  humidity = bme280_data[2]
+  pressure = bme280_data[1] / 100.0  # Convert pressure from Pa to hPa
+
   # Calculate dew point using helpers
   dew_point = helpers.calculate_dew_point(temperature, humidity)
 
   from ucollections import OrderedDict
   return OrderedDict({
-    "temperature": round(bme280_data[0], 2),
-    "humidity": round(bme280_data[2], 2),
-    "pressure": round(bme280_data[1] / 100.0, 2),
+    "temperature": round(temperature, 2),
+    "humidity": round(humidity, 2),
+    "pressure": round(pressure, 2),
     "luminance": round(ltr_data[BreakoutLTR559.LUX], 2),
     "moisture_a": round(moisture_levels[0], 2),
     "moisture_b": round(moisture_levels[1], 2),
-    "moisture_c": round(moisture_levels[2], 2)
+    "moisture_c": round(moisture_levels[2], 2),
+    "dew_point": round(dew_point, 2)
   })
   
 def play_tone(frequency = None):
