@@ -4,6 +4,7 @@ from breakout_ltr559 import BreakoutLTR559
 from machine import Pin, PWM
 from enviro import i2c
 from phew import logging
+import enviro.helpers as helpers  # Import helpers functions for calculations
 
 CHANNEL_NAMES = ['A', 'B', 'C']
 
@@ -110,6 +111,9 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   moisture_levels = moisture_readings()
 
   water(moisture_levels) # run pumps if needed
+
+  # Calculate dew point using helpers
+  dew_point = helpers.calculate_dew_point(temperature, humidity)
 
   from ucollections import OrderedDict
   return OrderedDict({
