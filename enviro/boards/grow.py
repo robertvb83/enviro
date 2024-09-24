@@ -78,17 +78,21 @@ def drip_noise():
         time.sleep(0.02)
     piezo_pwm.duty_u16(0)
 
-def water(moisture_levels):
-  # Load initial state
-  state = load_state('state.json')
+def water():
+    # Load initial state
+    state = load_state('state.json')
     from enviro import config
+
     targets = [
-        config.moisture_target_a, 
+        config.moisture_target_a,
         config.moisture_target_b,
         config.moisture_target_c
     ]
 
-    for i in range(0, 3):
+    # Get current moisture levels
+    moisture_levels = moisture_readings()  
+
+    for i in range(3):
         current_moisture = moisture_levels[i]
 
         # Check if moisture is below the dry threshold of 20%
@@ -106,34 +110,34 @@ def water(moisture_levels):
                 else:
                     state["dry_start_time"] = None  # Reset dry phase timer after 24 hours
 
-        # Watering logic for sensors that are not in the dry phase
-        if current_moisture < targets[i]:
-            duration = round((targets[i] - current_moisture) / 25, 1)
-            logging.info(f"> sensor {CHANNEL_NAMES[i]} below moisture target {targets[i]} (currently at {int(current_moisture)}).")
+        # Normal watering logic after dry phase
+        if current_moisture < WET_MOISTURE_TARGET:
+            logging.info(f"> Sensor {CHANNEL_NAMES[i]} below target (currently at {current_moisture}%). Starting watering...")
 
-            if config.auto_water:
-                logging.info(f"  - running pump {CHANNEL_NAMES[i]} for {duration} second(s)")
+            # Start the pump
+            pump_pins[i].value(1)
 
-                # Initialize watering logic
-                start_time = time.time()
-                MAX_WATERING_TIME = 300  # 5 minutes in seconds
+            # Set the start time for watering
+            start_time = time.time()  # Get the current time
 
-                # Run the pump with new watering logic
-                while (time.time() - start_time) < MAX_WATERING_TIME or current_moisture <= 20:
-                    pump_pins[i].value(1)  # Turn on pump
-                    time.sleep(1)  # Keep it on for at least 1 second
-                    current_moisture = moisture_readings()[i]  # Read moisture again
+            # Watering loop for a minimum of 5 minutes or until >20% moisture is reached
+            while (time.time() - start_time) < MAX_WATERING_TIME or current_moisture <= 20:
+                # Get updated moisture level during watering
+                moisture_levels = moisture_readings()  # Call moisture readings again
+                current_moisture = moisture_levels[i]  # Update current moisture for the specific sensor
+                logging.info(f"  - Current moisture level: {current_moisture}%")
 
-                    if current_moisture > 70:
-                        break  # Stop if moisture is above 70%
+                # Stop early if moisture level reaches or exceeds the wet target
+                if current_moisture >= WET_MOISTURE_TARGET:
+                    logging.info(f"  - Moisture target reached. Stopping pump {CHANNEL_NAMES[i]}.")
+                    break
 
-                pump_pins[i].value(0)  # Turn off pump
-                logging.info(f"  - finished watering {CHANNEL_NAMES[i]}")
-            else:
-                logging.info(f"  - playing beep")
-                for j in range(0, i + 1):
-                    drip_noise()
-                time.sleep(0.5)
+                # Sleep for a short time before the next check
+                time.sleep(1)
+
+            # Stop the pump after watering
+            pump_pins[i].value(0)
+            logging.info(f"  - Stopped watering after {int(time.time() - start_time)} seconds.")
 
 def get_sensor_readings(seconds_since_last, is_usb_power):
     bme280.read()
