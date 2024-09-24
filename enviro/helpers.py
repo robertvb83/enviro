@@ -98,3 +98,24 @@ def get_saturation_vapor_pressure(temperature_in_k):
       temperature_in_k *
       (a1*v + a2*v**1.5 + a3*v**3 + a4*v**3.5 + a5*v**4 + a6*v**7.5)
   )
+
+# Dew point calculation using the Magnus formula
+def calculate_dew_point(temperature_in_c, relative_humidity):
+    """
+    Calculate the dew point using the Magnus formula.
+    """
+    if temperature_in_c >= 0:
+        K_0 = 6.1094
+        K_1 = 17.625
+        K_2 = 243.04
+    else:
+        K_0 = 6.1121
+        K_1 = 22.587
+        K_2 = 273.86
+
+    # Magnus formula
+    alpha = math.log(relative_humidity / 100.0) + (K_1 * temperature_in_c) / (K_2 + temperature_in_c)
+    dew_point = (K_2 * alpha) / (K_1 - alpha)
+    
+    return round(dew_point, 2)
+  
