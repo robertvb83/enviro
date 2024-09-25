@@ -137,10 +137,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   ext_aqi = round(math.log(ext_gas_resistance) + 0.04 * ext_humidity, 1)
   
   # Calculate external absolute humidity using helpers
-  ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature)
+  ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature, ext_pressure)
 
   # Calculate predicted rel. humidity after venting using helpers
-  calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature)
+  calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature, ext_pressure)
 
   # Calculate delta rel. humidity before/after venting using helpers
   delta_humidity = calc_humidity - humidity
