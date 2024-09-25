@@ -51,6 +51,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   data = bme688.read()
   temperature = round(data[0], 2)
   humidity = round(data[2], 2)
+  pressure = round(data[1] / 100.0, 2)
 
   # External sensor data
   ext_data = ext_bme688.read()
@@ -61,11 +62,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   # relative humidity value.
   if is_usb_power:
     adjusted_temperature = temperature - config.usb_power_temperature_offset
-    absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature)
-    humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature)
+    absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
+    humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
 
-  pressure = round(data[1] / 100.0, 2)
   gas_resistance = round(data[3])
   # an approximate air quality calculation that accounts for the effect of
   # humidity on the gas sensor
@@ -83,10 +83,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   r, g, b, c = bh1745.rgbc_raw()
 
   # Calculate external absolute humidity using helpers
-  ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature)
+  ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature, ext_pressure)
     
   # Calculate predicted rel. humidity after venting using helpers
-  calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature)
+  calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature, ext_pressure)
 
   # Calculate delta rel. humidity before/after venting using helpers
   delta_humidity = calc_humidity - humidity
