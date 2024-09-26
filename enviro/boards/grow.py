@@ -90,14 +90,10 @@ def water(moisture_levels):
             # determine a duration to run the pump for
             duration = round((targets[i] - moisture_levels[i]) / 25, 1)
 
-            logging.info(
-                f"> sensor {CHANNEL_NAMES[i]} below moisture target {targets[i]} (currently at {int(moisture_levels[i])})."
-            )
+            logging.info(f"> sensor {CHANNEL_NAMES[i]} below moisture target {targets[i]} (currently at {int(moisture_levels[i])}).")
 
             if config.auto_water:
-                logging.info(
-                    f"  - running pump {CHANNEL_NAMES[i]} for {duration} second(s)"
-                )
+                logging.info(f"  - running pump {CHANNEL_NAMES[i]} for {duration} second(s)")
                 pump_pins[i].value(1)
                 time.sleep(duration)
                 pump_pins[i].value(0)
@@ -140,7 +136,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             "moisture_a": round(moisture_levels[0], 2),
             "moisture_b": round(moisture_levels[1], 2),
             "moisture_c": round(moisture_levels[2], 2),
-            "dew_point": round(dew_point, 2),
+            "dew_point": round(dew_point, 2)
         }
     )
 
