@@ -131,6 +131,26 @@ def get_temperature_offset(temp):
             return o1 + (o2 - o1) * (temp - t1) / (t2 - t1)
 
 
+def get_humidity_factor(humid):
+    # Define the temperature points and corresponding offsets
+    humid_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    factor_points = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
+
+    # If temperature is outside defined range, cap the offset
+    if humid <= humid_points[0]:
+        return factor_points[0]
+    elif humid >= humid_points[-1]:
+        return factor_points[-1]
+
+    # Linear interpolation for temperatures within the defined range
+    for i in range(1, len(humid_points)):
+        if humid_points[i - 1] <= humid <= humid_points[i]:
+            # Interpolate between temp_points[i-1] and temp_points[i]
+            t1, t2 = humid_points[i - 1], humid_points[i]
+            o1, o2 = factor_points[i - 1], factor_points[i]
+            return o1 + (o2 - o1) * (humid - t1) / (t2 - t1)
+
+
 def get_sensor_readings(seconds_since_last, is_usb_power):
     # bme280 returns the register contents immediately and then starts a new reading
     # we want the current reading so do a dummy read to discard register contents first
@@ -160,8 +180,11 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         adjusted_temperature = temperature - non_usb_offset
 
     absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
-    humidity = 0.975 * helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
+    adjusted_humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
+
+    humidity_factor = get_humidity_factor(adjusted_humidity)
+    humidity = humidity_factor * adjusted_humidity
 
     # Read from external BME688 sensor
     ext_temperature = bme688_data[0]
