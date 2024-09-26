@@ -29,9 +29,7 @@ def timestamp(dt):
 
 
 def uid():
-    return "{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}".format(
-        *machine.unique_id()
-    )
+    return "{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}".format(*machine.unique_id())
 
 
 # file management helpers
@@ -75,26 +73,16 @@ def copy_file(source, target):
 # https://www.calctool.org/atmospheric-thermodynamics/absolute-humidity#what-is-and-how-to-calculate-absolute-humidity
 def relative_to_absolute_humidity(relative_humidity, temperature_in_c, pressure_in_hpa):
     temperature_in_k = celcius_to_kelvin(temperature_in_c)
-    actual_vapor_pressure = get_actual_vapor_pressure(
-        relative_humidity, temperature_in_k, pressure_in_hpa
-    )
+    actual_vapor_pressure = get_actual_vapor_pressure(relative_humidity, temperature_in_k, pressure_in_hpa)
 
-    return actual_vapor_pressure / (
-        WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temperature_in_k
-    )
+    return actual_vapor_pressure / (WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temperature_in_k)
 
 
 def absolute_to_relative_humidity(absolute_humidity, temperature_in_c, pressure_in_hpa):
     temperature_in_k = celcius_to_kelvin(temperature_in_c)
-    saturation_vapor_pressure = get_saturation_vapor_pressure(
-        temperature_in_k, pressure_in_hpa
-    )
+    saturation_vapor_pressure = get_saturation_vapor_pressure(temperature_in_k, pressure_in_hpa)
 
-    return (
-        (WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temperature_in_k * absolute_humidity)
-        / saturation_vapor_pressure
-        * 100
-    )
+    return ((WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temperature_in_k * absolute_humidity) / saturation_vapor_pressure * 100)
 
 
 def celcius_to_kelvin(temperature_in_c):
@@ -104,9 +92,7 @@ def celcius_to_kelvin(temperature_in_c):
 # https://www.calctool.org/atmospheric-thermodynamics/absolute-humidity#actual-vapor-pressure
 # http://cires1.colorado.edu/~voemel/vp.html
 def get_actual_vapor_pressure(relative_humidity, temperature_in_k, pressure_in_hpa):
-    return get_saturation_vapor_pressure(temperature_in_k, pressure_in_hpa) * (
-        relative_humidity / 100
-    )
+    return get_saturation_vapor_pressure(temperature_in_k, pressure_in_hpa) * (relative_humidity / 100)
 
 
 def get_saturation_vapor_pressure(temperature_in_k, pressure_in_hpa):
@@ -121,29 +107,11 @@ def get_saturation_vapor_pressure(temperature_in_k, pressure_in_hpa):
     a5 = -15.9618719
     a6 = 1.80122502
 
-    return (
-        f
-        * CRITICAL_WATER_PRESSURE
-        * math.exp(
-            CRITICAL_WATER_TEMPERATURE
-            / temperature_in_k
-            * (
-                a1 * v
-                + a2 * v**1.5
-                + a3 * v**3
-                + a4 * v**3.5
-                + a5 * v**4
-                + a6 * v**7.5
-            )
-        )
-    )
+    return (f * CRITICAL_WATER_PRESSURE * math.exp(CRITICAL_WATER_TEMPERATURE / temperature_in_k * (a1 * v + a2 * v**1.5 + a3 * v**3 + a4 * v**3.5 + a5 * v**4 + a6 * v**7.5)))
 
 
 # Dew point calculation using the Magnus formula
 def calculate_dew_point(temperature_in_c, relative_humidity):
-    """
-    Calculate the dew point using the Magnus formula.
-    """
     if temperature_in_c >= 0:
         K_0 = 6.1094
         K_1 = 17.625
@@ -154,9 +122,7 @@ def calculate_dew_point(temperature_in_c, relative_humidity):
         K_2 = 273.86
 
     # Magnus formula
-    alpha = math.log(relative_humidity / 100.0) + (K_1 * temperature_in_c) / (
-        K_2 + temperature_in_c
-    )
+    alpha = math.log(relative_humidity / 100.0) + (K_1 * temperature_in_c) / (K_2 + temperature_in_c)
     dew_point = (K_2 * alpha) / (K_1 - alpha)
 
     return dew_point
