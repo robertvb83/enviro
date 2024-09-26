@@ -70,20 +70,20 @@ def get_temperature_offset(temp):
 
 
 def get_humidity_factor(humid):
-    # Define the temperature points and corresponding offsets
+    # Define the humidity points and corresponding factors
     humid_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
     factor_points = [1, 1, 1, 1, 0.966, 0.966, 0.966, 0.966, 1, 1, 1]
 
-    # If temperature is outside defined range, cap the offset
+    # If humidity is outside defined range, cap the factor
     if humid <= humid_points[0]:
         return factor_points[0]
     elif humid >= humid_points[-1]:
         return factor_points[-1]
 
-    # Linear interpolation for temperatures within the defined range
+    # Linear interpolation for humidities within the defined range
     for i in range(1, len(humid_points)):
         if humid_points[i - 1] <= humid <= humid_points[i]:
-            # Interpolate between temp_points[i-1] and temp_points[i]
+            # Interpolate between humid_points[i-1] and humid_points[i]
             t1, t2 = humid_points[i - 1], humid_points[i]
             o1, o2 = factor_points[i - 1], factor_points[i]
             return o1 + (o2 - o1) * (humid - t1) / (t2 - t1)
