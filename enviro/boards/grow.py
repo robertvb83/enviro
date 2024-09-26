@@ -173,8 +173,8 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     # Read from external BME688 sensor
     ext_temperature = bme688_data[0]
     ext_humidity = bme688_data[2]
-    ext_pressure = round(bme688_data[1] / 100.0, 2)
-    ext_gas_resistance = round(bme688_data[3])
+    ext_pressure = bme688_data[1] / 100.0
+    ext_gas_resistance = bme688_data[3]
     # an approximate air quality calculation that accounts for the effect of
     # humidity on the gas sensor
     # https://forums.pimoroni.com/t/bme680-observed-gas-ohms-readings/6608/25
@@ -212,8 +212,8 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             "dew_point": round(dew_point, 2),
             "ext_temperature": round(ext_temperature, 2),
             "ext_humidity": round(ext_humidity, 2),
-            "ext_pressure": ext_pressure,
-            "ext_gas_resistance": ext_gas_resistance,
+            "ext_pressure": round(ext_pressure, 2),
+            "ext_gas_resistance": round(ext_gas_resistance),
             "ext_aqi": ext_aqi,
             "ext_dew_point": round(ext_dew_point, 2),
             "calc_humidity": round(calc_humidity, 2),
