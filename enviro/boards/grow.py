@@ -96,14 +96,10 @@ def water(moisture_levels):
             # determine a duration to run the pump for
             duration = round((targets[i] - moisture_levels[i]) / 25, 1)
 
-            logging.info(
-                f"> sensor {CHANNEL_NAMES[i]} below moisture target {targets[i]} (currently at {int(moisture_levels[i])})."
-            )
+            logging.info(f"> sensor {CHANNEL_NAMES[i]} below moisture target {targets[i]} (currently at {int(moisture_levels[i])}).")
 
             if config.auto_water:
-                logging.info(
-                    f"  - running pump {CHANNEL_NAMES[i]} for {duration} second(s)"
-                )
+                logging.info(f"  - running pump {CHANNEL_NAMES[i]} for {duration} second(s)")
                 pump_pins[i].value(1)
                 time.sleep(duration)
                 pump_pins[i].value(0)
@@ -162,12 +158,8 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         non_usb_offset = get_temperature_offset(temperature)
         adjusted_temperature = temperature - non_usb_offset
 
-    absolute_humidity = helpers.relative_to_absolute_humidity(
-        humidity, temperature, pressure
-    )
-    humidity = helpers.absolute_to_relative_humidity(
-        absolute_humidity, adjusted_temperature, pressure
-    )
+    absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
+    humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
 
     # Read from external BME688 sensor
@@ -181,14 +173,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     ext_aqi = round(math.log(ext_gas_resistance) + 0.04 * ext_humidity, 1)
 
     # Calculate external absolute humidity using helpers
-    ext_absolute_humidity = helpers.relative_to_absolute_humidity(
-        ext_humidity, ext_temperature, ext_pressure
-    )
+    ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature, ext_pressure)
 
     # Calculate predicted rel. humidity after venting using helpers
-    calc_humidity = helpers.absolute_to_relative_humidity(
-        ext_absolute_humidity, temperature, ext_pressure
-    )
+    calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature, ext_pressure)
 
     # Calculate delta rel. humidity before/after venting using helpers
 
@@ -217,7 +205,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             "ext_aqi": ext_aqi,
             "ext_dew_point": round(ext_dew_point, 2),
             "calc_humidity": round(calc_humidity, 2),
-            "delta_humidity": round(delta_humidity, 2),
+            "delta_humidity": round(delta_humidity, 2)
         }
     )
 
