@@ -36,14 +36,10 @@ def colour_temperature_from_rgbc(r, g, b, c):
     ct = 0
     if c / g < 0.160:
         b_eff = min(b_ratio * 3.13, 1)
-        ct = ((1 - b_eff) * 12746 * (e ** (-2.911 * r_ratio))) + (
-            b_eff * 1637 * (e ** (4.865 * b_ratio))
-        )
+        ct = ((1 - b_eff) * 12746 * (e ** (-2.911 * r_ratio))) + (b_eff * 1637 * (e ** (4.865 * b_ratio)))
     else:
         b_eff = min(b_ratio * 10.67, 1)
-        ct = ((1 - b_eff) * 16234 * (e ** (-2.781 * r_ratio))) + (
-            b_eff * 1882 * (e ** (4.448 * b_ratio))
-        )
+        ct = ((1 - b_eff) * 16234 * (e ** (-2.781 * r_ratio))) + (b_eff * 1882 * (e ** (4.448 * b_ratio)))
     if ct > 10000:
         ct = 10000
     return round(ct)
@@ -60,12 +56,8 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     # relative humidity value.
     if is_usb_power:
         adjusted_temperature = temperature - config.usb_power_temperature_offset
-        absolute_humidity = helpers.relative_to_absolute_humidity(
-            humidity, temperature, pressure
-        )
-        humidity = helpers.absolute_to_relative_humidity(
-            absolute_humidity, adjusted_temperature, pressure
-        )
+        absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
+        humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
         temperature = adjusted_temperature
 
     gas_resistance = data[3]
@@ -91,6 +83,6 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             "aqi": aqi,
             "luminance": lux_from_rgbc(r, g, b, c),
             "color_temperature": colour_temperature_from_rgbc(r, g, b, c),
-            "dew_point": round(dew_point, 2),
+            "dew_point": round(dew_point, 2)
         }
     )
