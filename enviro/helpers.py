@@ -118,5 +118,5 @@ def calculate_dew_point(temperature_in_c, relative_humidity):
     alpha = math.log(relative_humidity / 100.0) + (K_1 * temperature_in_c) / (K_2 + temperature_in_c)
     dew_point = (K_2 * alpha) / (K_1 - alpha)
     
-    return round(dew_point, 2)
+    return dew_point
   
