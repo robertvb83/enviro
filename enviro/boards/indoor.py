@@ -51,8 +51,8 @@ def colour_temperature_from_rgbc(r, g, b, c):
 
 def get_temperature_offset(temp):
     # Define the temperature points and corresponding offsets
-    temp_points = [-20, -10, 0, 20, 30]
-    offset_points = [1, 1, 1, 1, 1]
+    temp_points = [-20, -10, 20, 23.5, 30]
+    offset_points = [1, 1, 1.1, 1.55, 2]
 
     # If temperature is outside defined range, cap the offset
     if temp <= temp_points[0]:
