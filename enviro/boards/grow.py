@@ -179,6 +179,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature, ext_pressure)
 
     # Calculate delta rel. humidity before/after venting using helpers
+    delta_humidity = calc_humidity - humidity
 
     # Calculate dew point using helpers
     dew_point = helpers.calculate_dew_point(temperature, humidity)
