@@ -40,14 +40,10 @@ def colour_temperature_from_rgbc(r, g, b, c):
     ct = 0
     if c / g < 0.160:
         b_eff = min(b_ratio * 3.13, 1)
-        ct = ((1 - b_eff) * 12746 * (e ** (-2.911 * r_ratio))) + (
-            b_eff * 1637 * (e ** (4.865 * b_ratio))
-        )
+        ct = ((1 - b_eff) * 12746 * (e ** (-2.911 * r_ratio))) + (b_eff * 1637 * (e ** (4.865 * b_ratio)))
     else:
         b_eff = min(b_ratio * 10.67, 1)
-        ct = ((1 - b_eff) * 16234 * (e ** (-2.781 * r_ratio))) + (
-            b_eff * 1882 * (e ** (4.448 * b_ratio))
-        )
+        ct = ((1 - b_eff) * 16234 * (e ** (-2.781 * r_ratio))) + (b_eff * 1882 * (e ** (4.448 * b_ratio)))
     if ct > 10000:
         ct = 10000
     return round(ct)
@@ -76,14 +72,14 @@ def get_temperature_offset(temp):
 def get_sensor_readings(seconds_since_last, is_usb_power):
     # Onboard sensor data
     data = bme688.read()
-    temperature = round(data[0], 2)
-    humidity = round(data[2], 2)
-    pressure = round(data[1] / 100.0, 2)
+    temperature = data[0]
+    humidity = data[2]
+    pressure = data[1] / 100.0
 
     # External sensor data
     ext_data = ext_bme688.read()
-    ext_temperature = round(ext_data[0], 2)
-    ext_humidity = round(ext_data[2], 2)
+    ext_temperature = ext_data[0]
+    ext_humidity = ext_data[2]
 
     # (only onboard sensor) Compensate for additional heating when on usb power - this also changes the
     # relative humidity value.
@@ -94,23 +90,19 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         non_usb_offset = get_temperature_offset(temperature)
         adjusted_temperature = temperature - non_usb_offset
 
-    absolute_humidity = helpers.relative_to_absolute_humidity(
-        humidity, temperature, pressure
-    )
-    humidity = helpers.absolute_to_relative_humidity(
-        absolute_humidity, adjusted_temperature, pressure
-    )
+    absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
+    humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
 
-    gas_resistance = round(data[3])
+    gas_resistance = data[3]
     # an approximate air quality calculation that accounts for the effect of
     # humidity on the gas sensor
     # https://forums.pimoroni.com/t/bme680-observed-gas-ohms-readings/6608/25
     aqi = round(math.log(gas_resistance) + 0.04 * humidity, 1)
 
     # External sensor pressure and gas resistance
-    ext_pressure = round(ext_data[1] / 100.0, 2)
-    ext_gas_resistance = round(ext_data[3])
+    ext_pressure = ext_data[1] / 100.0
+    ext_gas_resistance = ext_data[3]
 
     # External air quality index
     ext_aqi = round(math.log(ext_gas_resistance) + 0.04 * ext_humidity, 1)
@@ -119,14 +111,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     r, g, b, c = bh1745.rgbc_raw()
 
     # Calculate external absolute humidity using helpers
-    ext_absolute_humidity = helpers.relative_to_absolute_humidity(
-        ext_humidity, ext_temperature, ext_pressure
-    )
+    ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature, ext_pressure)
 
     # Calculate predicted rel. humidity after venting using helpers
-    calc_humidity = helpers.absolute_to_relative_humidity(
-        ext_absolute_humidity, temperature, ext_pressure
-    )
+    calc_humidity = helpers.absolute_to_relative_humidity(ext_absolute_humidity, temperature, ext_pressure)
 
     # Calculate delta rel. humidity before/after venting using helpers
     delta_humidity = calc_humidity - humidity
@@ -140,22 +128,22 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     return OrderedDict(
         {
             # Onboard sensor readings
-            "temperature": temperature,
-            "humidity": humidity,
-            "pressure": pressure,
-            "gas_resistance": gas_resistance,
+            "temperature": round(temperature, 2),
+            "humidity": round(humidity, 2),
+            "pressure": round(pressure, 2),
+            "gas_resistance": round(gas_resistance),
             "aqi": aqi,
             "luminance": lux_from_rgbc(r, g, b, c),
             "color_temperature": colour_temperature_from_rgbc(r, g, b, c),
             "dew_point": round(dew_point, 2),
             # External sensor readings
-            "ext_temperature": ext_temperature,
-            "ext_humidity": ext_humidity,
-            "ext_pressure": ext_pressure,
-            "ext_gas_resistance": ext_gas_resistance,
+            "ext_temperature": round(ext_temperature, 2),
+            "ext_humidity": round(ext_humidity, 2),
+            "ext_pressure": round(ext_pressure, 2),
+            "ext_gas_resistance": round(ext_gas_resistance),
             "ext_aqi": ext_aqi,
             "ext_dew_point": round(ext_dew_point, 2),
-            "calc_humidity": calc_humidity,
-            "delta_humidity": delta_humidity,
+            "calc_humidity": round(calc_humidity, 2),
+            "delta_humidity": round(delta_humidity, 2)
         }
     )
