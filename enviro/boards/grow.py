@@ -7,6 +7,7 @@ from machine import Pin, PWM
 from enviro import i2c
 from phew import logging
 import enviro.helpers as helpers  # Import helpers functions for calculations
+from enviro import config
 
 CHANNEL_NAMES = ["A", "B", "C"]
 
