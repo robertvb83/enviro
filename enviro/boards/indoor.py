@@ -52,9 +52,9 @@ def colour_temperature_from_rgbc(r, g, b, c):
 def get_sensor_readings(seconds_since_last, is_usb_power):
     data = bme688.read()
 
-    temperature = round(data[0], 2)
-    humidity = round(data[2], 2)
-    pressure = round(data[1] / 100.0, 2)
+    temperature = data[0]
+    humidity = data[2]
+    pressure = data[1] / 100.0
 
     # Compensate for additional heating when on usb power - this also changes the
     # relative humidity value.
@@ -68,7 +68,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         )
         temperature = adjusted_temperature
 
-    gas_resistance = round(data[3])
+    gas_resistance = data[3]
     # an approximate air quality calculation that accounts for the effect of
     # humidity on the gas sensor
     # https://forums.pimoroni.com/t/bme680-observed-gas-ohms-readings/6608/25
@@ -84,10 +84,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
     return OrderedDict(
         {
-            "temperature": temperature,
-            "humidity": humidity,
-            "pressure": pressure,
-            "gas_resistance": gas_resistance,
+            "temperature": round(temperature, 2),
+            "humidity": round(humidity, 2),
+            "pressure": round(pressure, 2),
+            "gas_resistance": round(gas_resistance),
             "aqi": aqi,
             "luminance": lux_from_rgbc(r, g, b, c),
             "color_temperature": colour_temperature_from_rgbc(r, g, b, c),
