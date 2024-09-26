@@ -159,7 +159,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         adjusted_temperature = temperature - non_usb_offset
 
     absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
-    humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
+    humidity = 0.975 * helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
 
     # Read from external BME688 sensor
