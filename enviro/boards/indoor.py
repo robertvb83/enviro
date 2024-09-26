@@ -46,6 +46,25 @@ def colour_temperature_from_rgbc(r, g, b, c):
       ct = 10000
   return round(ct)
 
+def get_temperature_offset(temp):
+    # Define the temperature points and corresponding offsets
+    temp_points = [-20,-10, 0, 20, 30]
+    offset_points = [1,1, 1, 1, 1]
+    
+    # If temperature is outside defined range, cap the offset
+    if temp <= temp_points[0]:
+        return offset_points[0]
+    elif temp >= temp_points[-1]:
+        return offset_points[-1]
+
+    # Linear interpolation for temperatures within the defined range
+    for i in range(1, len(temp_points)):
+        if temp_points[i-1] <= temp <= temp_points[i]:
+            # Interpolate between temp_points[i-1] and temp_points[i]
+            t1, t2 = temp_points[i-1], temp_points[i]
+            o1, o2 = offset_points[i-1], offset_points[i]
+            return o1 + (o2 - o1) * (temp - t1) / (t2 - t1)
+
 def get_sensor_readings(seconds_since_last, is_usb_power):
   # Onboard sensor data
   data = bme688.read()
@@ -62,10 +81,15 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
   # relative humidity value.
   if is_usb_power:
     adjusted_temperature = temperature - config.usb_power_temperature_offset
-    absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
-    humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
-    temperature = adjusted_temperature
+  else:
+    # Get sliding offset based on temperature
+    non_usb_offset = get_temperature_offset(temperature)
+    adjusted_temperature = temperature - non_usb_offset
 
+  absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
+  humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
+  temperature = adjusted_temperature
+  
   gas_resistance = round(data[3])
   # an approximate air quality calculation that accounts for the effect of
   # humidity on the gas sensor
