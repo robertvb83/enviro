@@ -126,3 +126,27 @@ def calculate_dew_point(temperature_in_c, relative_humidity):
     dew_point = (K_2 * alpha) / (K_1 - alpha)
 
     return dew_point
+
+
+def interpolate(value, points, corrections):
+    """
+    Generic function to interpolate a correction factor based on a value.
+    
+    :param value: The input value for which we want to find the correction (e.g., temperature or humidity).
+    :param points: Array of reference points (e.g., temperature points or humidity points).
+    :param corrections: Array of correction factors corresponding to the points.
+    
+    :return: The interpolated correction factor.
+    """
+    # If value is outside the range, cap it
+    if value <= points[0]:
+        return corrections[0]
+    elif value >= points[-1]:
+        return corrections[-1]
+
+    # Linear interpolation within the defined range
+    for i in range(1, len(points)):
+        if points[i - 1] <= value <= points[i]:
+            t1, t2 = points[i - 1], points[i]
+            c1, c2 = corrections[i - 1], corrections[i]
+            return c1 + (c2 - c1) * (value - t1) / (t2 - t1)
