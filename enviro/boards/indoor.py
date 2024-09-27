@@ -68,7 +68,7 @@ def colour_temperature_from_rgbc(r, g, b, c):
 
 def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor, is_usb_power):
     # Select the appropriate filename based on the power source
-    filename = "grow_calibration_data_usb.txt" if is_usb_power else "grow_calibration_data.txt"
+    filename = "indoor_calibration_data_usb.txt" if is_usb_power else "indoor_calibration_data.txt"
 
     # Read existing data from the file
     try:
