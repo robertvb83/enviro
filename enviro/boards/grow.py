@@ -165,7 +165,7 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
         temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset, 2))
     else:
         temperature_offsets.append(round(temp_offset, 2))
-    humidity_points.append(round(temperature, 2))
+    humidity_points.append(round(temperature, 2)) # changed from adjusted_humidity
     humidity_factors.append(round(humidity_factor, 2))
 
     # Sort the arrays based on temperature and humidity
@@ -237,14 +237,15 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
     absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
     adjusted_humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
-    temperature = adjusted_temperature
 
     if is_usb_power:
-        humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points_usb, humidity_factors_usb)
+        humidity_factor = helpers.interpolate(temperature, humidity_points_usb, humidity_factors_usb)
     else:
-        humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points, humidity_factors)
+        humidity_factor = helpers.interpolate(temperature, humidity_points, humidity_factors)
     humidity = humidity_factor * adjusted_humidity  # Adjust humidity with correction factor
 
+    temperature = adjusted_temperature
+    
     # Calculate external absolute humidity using helpers
     ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature, ext_pressure)
 
