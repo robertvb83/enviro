@@ -60,10 +60,13 @@ def colour_temperature_from_rgbc(r, g, b, c):
     return round(ct)
 
 
-def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor):
+def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor, is_usb_power):
+    # Select the appropriate filename based on the power source
+    filename = "grow_calibration_data_usb.txt" if is_usb_power else "grow_calibration_data.txt"
+
     # Read existing data from the file
     try:
-        with open("grow_calibration_data.txt", "r") as f:
+        with open(filename, "r") as f:
             lines = f.readlines()
             if lines:
                 # Extracting the values safely
@@ -92,8 +95,9 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
     # Append the new values
     temperature_points.append(round(temperature, 2))
     if is_usb_power:
-        temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset,2 ))
-    temperature_offsets.append(round(temp_offset,2 ))
+        temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset, 2))
+    else:
+        temperature_offsets.append(round(temp_offset, 2))
     humidity_points.append(round(adjusted_humidity, 2))
     humidity_factors.append(round(humidity_factor, 2))
 
@@ -106,12 +110,11 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
     humidity_points, humidity_factors = zip(*humidity_sorted) if humidity_sorted else ([], [])
 
     # Save the updated arrays back to the file
-    with open("grow_calibration_data.txt", "w") as f:
+    with open(filename, "w") as f:
         f.write(f"temperature_points = {list(temperature_points)}\n")
         f.write(f"temperature_offsets = {list(temperature_offsets)}\n")
         f.write(f"humidity_points = {list(humidity_points)}\n")
         f.write(f"humidity_factors = {list(humidity_factors)}\n")
-
 
 def get_sensor_readings(seconds_since_last, is_usb_power):
     # Onboard sensor data
