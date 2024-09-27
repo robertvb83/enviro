@@ -121,6 +121,48 @@ def water(moisture_levels):
                 time.sleep(0.5)
 
 
+def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor):
+    # Read existing data from the file
+    try:
+        with open("grow_calibration_data.txt", "r") as f:
+            lines = f.readlines()
+            if lines:
+                temperature_points = eval(lines[0].strip().split('=')[1])
+                temperature_offsets = eval(lines[1].strip().split('=')[1])
+                humidity_points = eval(lines[2].strip().split('=')[1])
+                humidity_factors = eval(lines[3].strip().split('=')[1])
+            else:
+                temperature_points = []
+                temperature_offsets = []
+                humidity_points = []
+                humidity_factors = []
+    except FileNotFoundError:
+        temperature_points = []
+        temperature_offsets = []
+        humidity_points = []
+        humidity_factors = []
+
+    # Append the new values
+    temperature_points.append(temperature)
+    temperature_offsets.append(temp_offset)
+    humidity_points.append(adjusted_humidity)
+    humidity_factors.append(humidity_factor)
+
+    # Sort the arrays based on temperature and humidity
+    temp_sorted = sorted(zip(temperature_points, temperature_offsets))
+    humidity_sorted = sorted(zip(humidity_points, humidity_factors))
+
+    temperature_points, temperature_offsets = zip(*temp_sorted)
+    humidity_points, humidity_factors = zip(*humidity_sorted)
+
+    # Save the updated arrays back to the file
+    with open("grow_calibration_data.txt", "w") as f:
+        f.write(f"temperature_points = {list(temperature_points)}\n")
+        f.write(f"temperature_offsets = {list(temperature_offsets)}\n")
+        f.write(f"humidity_points = {list(humidity_points)}\n")
+        f.write(f"humidity_factors = {list(humidity_factors)}\n")
+
+
 def get_sensor_readings(seconds_since_last, is_usb_power):
     # bme280 returns the register contents immediately and then starts a new reading
     # we want the current reading so do a dummy read to discard register contents first
@@ -142,6 +184,28 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     humidity = bme280_data[2]
     pressure = bme280_data[1] / 100.0  # Convert pressure from Pa to hPa
 
+    # Read from external BME688 sensor
+    ext_temperature = bme688_data[0]
+    ext_humidity = bme688_data[2]
+    ext_pressure = bme688_data[1] / 100.0
+    ext_gas_resistance = bme688_data[3]
+    # an approximate air quality calculation that accounts for the effect of
+    # humidity on the gas sensor
+    # https://forums.pimoroni.com/t/bme680-observed-gas-ohms-readings/6608/25
+    ext_aqi = round(math.log(ext_gas_resistance) + 0.04 * ext_humidity, 1)
+
+    is_calibration = True
+    if is_calibration:
+        # calculate offset values for fitting
+        calc_temp_offset = temperature - ext_temperature
+        calc_adjusted_temperature = temperature - calc_temp_offset
+        calc_absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
+        calc_adjusted_humidity = helpers.absolute_to_relative_humidity(calc_absolute_humidity, calc_adjusted_temperature, pressure)
+        calc_humidity_factor = ext_humidity / calc_adjusted_humidity
+
+        # Save the values to a text file
+        append_to_calibration_file(temperature, calc_temp_offset, calc_adjusted_humidity, calc_humidity_factor)
+    
     if is_usb_power:
         usb_offset = helpers.interpolate(temperature, temperature_points, temperature_offsets) + config.usb_power_temperature_offset
         adjusted_temperature = temperature - usb_offset
@@ -156,16 +220,6 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
     humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points, humidity_factors)
     humidity = humidity_factor * adjusted_humidity  # Adjust humidity with correction factor
-
-    # Read from external BME688 sensor
-    ext_temperature = bme688_data[0]
-    ext_humidity = bme688_data[2]
-    ext_pressure = bme688_data[1] / 100.0
-    ext_gas_resistance = bme688_data[3]
-    # an approximate air quality calculation that accounts for the effect of
-    # humidity on the gas sensor
-    # https://forums.pimoroni.com/t/bme680-observed-gas-ohms-readings/6608/25
-    ext_aqi = round(math.log(ext_gas_resistance) + 0.04 * ext_humidity, 1)
 
     # Calculate external absolute humidity using helpers
     ext_absolute_humidity = helpers.relative_to_absolute_humidity(ext_humidity, ext_temperature, ext_pressure)
