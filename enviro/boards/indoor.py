@@ -17,11 +17,11 @@ temperature_points_usb = [-20, -10, 20, 23.5, 30]
 temperature_offsets_usb = [1, 1, 1.1, 1.55, 2]
 
 # For humidity factor
-humidity_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-humidity_factors = [1, 1, 1, 1, 0.966, 0.966, 0.966, 0.966, 1, 1, 1]
+humidity_points = [-20, -10, 20, 23.5, 30] # as Temperature
+humidity_factors = [0.91, 0.93, 0.966, 0.966, 1]
 
-humidity_points_usb = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-humidity_factors_usb = [1, 1, 1, 1, 0.966, 0.966, 0.966, 0.966, 1, 1, 1]
+humidity_points_usb = [-20, -10, 20, 23.5, 30] # as Temperature
+humidity_factors_usb = [0.91, 0.93, 0.966, 0.966, 1]
 
 # Onboard BME688 sensor
 bme688 = BreakoutBME68X(i2c, address=0x77)
@@ -104,7 +104,7 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
         temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset, 2))
     else:
         temperature_offsets.append(round(temp_offset, 2))
-    humidity_points.append(round(adjusted_humidity, 2))
+    humidity_points.append(round(temperature, 2)) # changed from adjusted humidity
     humidity_factors.append(round(humidity_factor, 2))
 
     # Sort the arrays based on temperature and humidity
@@ -158,14 +158,15 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
     absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
     adjusted_humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
-    temperature = adjusted_temperature
-
+    
     if is_usb_power:
-        humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points_usb, humidity_factors_usb)
+        humidity_factor = helpers.interpolate(temperature, humidity_points_usb, humidity_factors_usb)
     else:
-        humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points, humidity_factors)
+        humidity_factor = helpers.interpolate(temperature, humidity_points, humidity_factors)
     humidity = humidity_factor * adjusted_humidity  # Adjust humidity with correction factor
 
+    temperature = adjusted_temperature
+    
     gas_resistance = data[3]
     # an approximate air quality calculation that accounts for the effect of
     # humidity on the gas sensor
