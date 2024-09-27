@@ -9,6 +9,16 @@ from phew import logging
 import enviro.helpers as helpers  # Import helpers functions for calculations
 from enviro import config
 
+# temperature and humidity correction array definitions
+
+# For temperature offset
+temperature_points = [-20, -10, 0, 20, 30]
+temperature_offsets = [1, 1, 1, 1, 1]
+
+# For humidity factor
+humidity_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+humidity_factors = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
+
 CHANNEL_NAMES = ["A", "B", "C"]
 
 # Initialize onboard sensors
@@ -111,46 +121,6 @@ def water(moisture_levels):
                 time.sleep(0.5)
 
 
-def get_temperature_offset(temp):
-    # Define the temperature points and corresponding offsets
-    temp_points = [-20, -10, 0, 20, 30]
-    offset_points = [1, 1, 1, 1, 1]
-
-    # If temperature is outside defined range, cap the offset
-    if temp <= temp_points[0]:
-        return offset_points[0]
-    elif temp >= temp_points[-1]:
-        return offset_points[-1]
-
-    # Linear interpolation for temperatures within the defined range
-    for i in range(1, len(temp_points)):
-        if temp_points[i - 1] <= temp <= temp_points[i]:
-            # Interpolate between temp_points[i-1] and temp_points[i]
-            t1, t2 = temp_points[i - 1], temp_points[i]
-            o1, o2 = offset_points[i - 1], offset_points[i]
-            return o1 + (o2 - o1) * (temp - t1) / (t2 - t1)
-
-
-def get_humidity_factor(humid):
-    # Define the humidity points and corresponding factors
-    humid_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    factor_points = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
-
-    # If humidity is outside defined range, cap the factor
-    if humid <= humid_points[0]:
-        return factor_points[0]
-    elif humid >= humid_points[-1]:
-        return factor_points[-1]
-
-    # Linear interpolation for humidities within the defined range
-    for i in range(1, len(humid_points)):
-        if humid_points[i - 1] <= humid <= humid_points[i]:
-            # Interpolate between humid_points[i-1] and humid_points[i]
-            t1, t2 = humid_points[i - 1], humid_points[i]
-            o1, o2 = factor_points[i - 1], factor_points[i]
-            return o1 + (o2 - o1) * (humid - t1) / (t2 - t1)
-
-
 def get_sensor_readings(seconds_since_last, is_usb_power):
     # bme280 returns the register contents immediately and then starts a new reading
     # we want the current reading so do a dummy read to discard register contents first
@@ -173,18 +143,19 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     pressure = bme280_data[1] / 100.0  # Convert pressure from Pa to hPa
 
     if is_usb_power:
-        adjusted_temperature = temperature - config.usb_power_temperature_offset
+        usb_offset = helpers.interpolate(temperature, temperature_points, temperature_offsets) + config.usb_power_temperature_offset
+        adjusted_temperature = temperature - usb_offset
     else:
         # Get sliding offset based on temperature
-        non_usb_offset = get_temperature_offset(temperature)
+        non_usb_offset = helpers.interpolate(temperature, temperature_points, temperature_offsets)
         adjusted_temperature = temperature - non_usb_offset
 
     absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
     adjusted_humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
 
-    humidity_factor = get_humidity_factor(adjusted_humidity)
-    humidity = humidity_factor * adjusted_humidity
+    humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points, humidity_factors)
+    humidity = humidity_factor * adjusted_humidity  # Adjust humidity with correction factor
 
     # Read from external BME688 sensor
     ext_temperature = bme688_data[0]
