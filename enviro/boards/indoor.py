@@ -6,6 +6,17 @@ from breakout_bh1745 import BreakoutBH1745
 from enviro import config
 from enviro import i2c
 
+
+# temperature and humidity array definitions
+
+# For temperature offset
+temperature_points = [-20, -10, 20, 23.5, 30]
+temperature_offsets = [1, 1, 1.1, 1.55, 2]
+
+# For humidity factor
+humidity_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+humidity_factors = [1, 1, 1, 1, 0.966, 0.966, 0.966, 0.966, 1, 1, 1]
+
 # Onboard BME688 sensor
 bme688 = BreakoutBME68X(i2c, address=0x77)
 
@@ -49,44 +60,46 @@ def colour_temperature_from_rgbc(r, g, b, c):
     return round(ct)
 
 
-def get_temperature_offset(temp):
-    # Define the temperature points and corresponding offsets
-    temp_points = [-20, -10, 20, 23.5, 30]
-    offset_points = [1, 1, 1.1, 1.55, 2]
+def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor):
+    # Read existing data from the file
+    try:
+        with open("indoor_calibration_data.txt", "r") as f:
+            lines = f.readlines()
+            if lines:
+                temperature_points = eval(lines[0].strip().split('=')[1])
+                temperature_offsets = eval(lines[1].strip().split('=')[1])
+                humidity_points = eval(lines[2].strip().split('=')[1])
+                humidity_factors = eval(lines[3].strip().split('=')[1])
+            else:
+                temperature_points = []
+                temperature_offsets = []
+                humidity_points = []
+                humidity_factors = []
+    except FileNotFoundError:
+        temperature_points = []
+        temperature_offsets = []
+        humidity_points = []
+        humidity_factors = []
 
-    # If temperature is outside defined range, cap the offset
-    if temp <= temp_points[0]:
-        return offset_points[0]
-    elif temp >= temp_points[-1]:
-        return offset_points[-1]
+    # Append the new values
+    temperature_points.append(temperature)
+    temperature_offsets.append(temp_offset)
+    humidity_points.append(adjusted_humidity)
+    humidity_factors.append(humidity_factor)
 
-    # Linear interpolation for temperatures within the defined range
-    for i in range(1, len(temp_points)):
-        if temp_points[i - 1] <= temp <= temp_points[i]:
-            # Interpolate between temp_points[i-1] and temp_points[i]
-            t1, t2 = temp_points[i - 1], temp_points[i]
-            o1, o2 = offset_points[i - 1], offset_points[i]
-            return o1 + (o2 - o1) * (temp - t1) / (t2 - t1)
+    # Sort the arrays based on temperature and humidity
+    temp_sorted = sorted(zip(temperature_points, temperature_offsets))
+    humidity_sorted = sorted(zip(humidity_points, humidity_factors))
 
+    temperature_points, temperature_offsets = zip(*temp_sorted)
+    humidity_points, humidity_factors = zip(*humidity_sorted)
 
-def get_humidity_factor(humid):
-    # Define the humidity points and corresponding factors
-    humid_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    factor_points = [1, 1, 1, 1, 0.966, 0.966, 0.966, 0.966, 1, 1, 1]
-
-    # If humidity is outside defined range, cap the factor
-    if humid <= humid_points[0]:
-        return factor_points[0]
-    elif humid >= humid_points[-1]:
-        return factor_points[-1]
-
-    # Linear interpolation for humidities within the defined range
-    for i in range(1, len(humid_points)):
-        if humid_points[i - 1] <= humid <= humid_points[i]:
-            # Interpolate between humid_points[i-1] and humid_points[i]
-            t1, t2 = humid_points[i - 1], humid_points[i]
-            o1, o2 = factor_points[i - 1], factor_points[i]
-            return o1 + (o2 - o1) * (humid - t1) / (t2 - t1)
+    # Save the updated arrays back to the file
+    with open("indoor_calibration_data.txt", "w") as f:
+        f.write(f"temperature_points = {list(temperature_points)}\n")
+        f.write(f"temperature_offsets = {list(temperature_offsets)}\n")
+        f.write(f"humidity_points = {list(humidity_points)}\n")
+        f.write(f"humidity_factors = {list(humidity_factors)}\n")
 
 
 def get_sensor_readings(seconds_since_last, is_usb_power):
@@ -101,21 +114,34 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     ext_temperature = ext_data[0]
     ext_humidity = ext_data[2]
 
+    is_calibration = true
+    if is_calibration:
+        # calculate offset values for fitting
+        calc_temp_offset = temperature - ext_temperature
+        calc_adjusted_temperature = temperature - calc_temp_offset
+        calc_absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
+        calc_adjusted_humidity = helpers.absolute_to_relative_humidity(calc_absolute_humidity, calc_adjusted_temperature, pressure)
+        calc_humidity_factor = ext_humidity / calc_adjusted_humidity
+
+        # Save the values to a text file
+        append_to_calibration_file(temperature, calc_temp_offset, calc_adjusted_humidity, calc_humidity_factor)
+
     # (only onboard sensor) Compensate for additional heating when on usb power - this also changes the
     # relative humidity value.
     if is_usb_power:
-        adjusted_temperature = temperature - config.usb_power_temperature_offset
+        usb_offset = helpers.interpolate(temperature, temperature_points, temperature_offsets) + config.usb_power_temperature_offset
+        adjusted_temperature = temperature - usb_offset
     else:
         # Get sliding offset based on temperature
-        non_usb_offset = get_temperature_offset(temperature)
+        non_usb_offset = helpers.interpolate(temperature, temperature_points, temperature_offsets)
         adjusted_temperature = temperature - non_usb_offset
 
     absolute_humidity = helpers.relative_to_absolute_humidity(humidity, temperature, pressure)
     adjusted_humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
 
-    humidity_factor = get_humidity_factor(adjusted_humidity)
-    humidity = humidity_factor * adjusted_humidity
+    humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points, humidity_factors)
+    humidity = humidity_factor * adjusted_humidity  # Adjust humidity with correction factor
 
     gas_resistance = data[3]
     # an approximate air quality calculation that accounts for the effect of
