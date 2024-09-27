@@ -127,10 +127,11 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
         with open("grow_calibration_data.txt", "r") as f:
             lines = f.readlines()
             if lines:
-                temperature_points = eval(lines[0].strip().split('=')[1])
-                temperature_offsets = eval(lines[1].strip().split('=')[1])
-                humidity_points = eval(lines[2].strip().split('=')[1])
-                humidity_factors = eval(lines[3].strip().split('=')[1])
+                # Extracting the values safely
+                temperature_points = eval(lines[0].strip().split('=')[1].strip())
+                temperature_offsets = eval(lines[1].strip().split('=')[1].strip())
+                humidity_points = eval(lines[2].strip().split('=')[1].strip())
+                humidity_factors = eval(lines[3].strip().split('=')[1].strip())
             else:
                 temperature_points = []
                 temperature_offsets = []
@@ -141,19 +142,27 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
         temperature_offsets = []
         humidity_points = []
         humidity_factors = []
+    except SyntaxError as e:
+        print(f"Syntax error in the calibration file: {e}")
+        # Reset lists in case of error
+        temperature_points = []
+        temperature_offsets = []
+        humidity_points = []
+        humidity_factors = []
 
     # Append the new values
-    temperature_points.append(temperature)
-    temperature_offsets.append(temp_offset)
-    humidity_points.append(adjusted_humidity)
-    humidity_factors.append(humidity_factor)
+    temperature_points.append(round(temperature, 2))
+    temperature_offsets.append(round(temp_offset,2 ))
+    humidity_points.append(round(adjusted_humidity, 2))
+    humidity_factors.append(round(humidity_factor, 2))
 
     # Sort the arrays based on temperature and humidity
     temp_sorted = sorted(zip(temperature_points, temperature_offsets))
     humidity_sorted = sorted(zip(humidity_points, humidity_factors))
 
-    temperature_points, temperature_offsets = zip(*temp_sorted)
-    humidity_points, humidity_factors = zip(*humidity_sorted)
+    # Unzip the sorted tuples back into lists
+    temperature_points, temperature_offsets = zip(*temp_sorted) if temp_sorted else ([], [])
+    humidity_points, humidity_factors = zip(*humidity_sorted) if humidity_sorted else ([], [])
 
     # Save the updated arrays back to the file
     with open("grow_calibration_data.txt", "w") as f:
