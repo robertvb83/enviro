@@ -12,18 +12,18 @@ from enviro import config
 # temperature and humidity correction array definitions
 
 # For temperature offset
-temperature_points = [-20, -10, 0, 20, 30]
-temperature_offsets = [1, 1, 1, 1, 1]
+temperature_points = [-20, -10, 0, 20, 23, 30]
+temperature_offsets = [1, 1, 1, 1, 1.1, 1.2]
 
 temperature_points_usb = [-20, -10, 0, 20, 28.3, 28.6]
 temperature_offsets_usb = [1, 1, 1, 1, 1.37, 1.6]
 
 # For humidity factor
-humidity_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-humidity_factors = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
+humidity_points = [-20, -10, 0, 20, 30] # as Temperature
+humidity_factors = [1, 1, 1, 0.975, 1]
 
-humidity_points_usb = [0, 10, 20, 30, 40, 53.98, 60, 70, 80, 90, 100]
-humidity_factors_usb = [1, 1, 1, 1, 1, 1.02, 1, 1, 1, 1, 1]
+humidity_points_usb = [-20, -10, 0, 20, 30] # as Temperature
+humidity_factors_usb = [1, 1, 1, 0.975, 1]
 
 CHANNEL_NAMES = ["A", "B", "C"]
 
@@ -165,7 +165,7 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
         temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset, 2))
     else:
         temperature_offsets.append(round(temp_offset, 2))
-    humidity_points.append(round(adjusted_humidity, 2))
+    humidity_points.append(round(temperature, 2))
     humidity_factors.append(round(humidity_factor, 2))
 
     # Sort the arrays based on temperature and humidity
