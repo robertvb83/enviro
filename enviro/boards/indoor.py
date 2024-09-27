@@ -114,7 +114,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     ext_temperature = ext_data[0]
     ext_humidity = ext_data[2]
 
-    is_calibration = true
+    is_calibration = True
     if is_calibration:
         # calculate offset values for fitting
         calc_temp_offset = temperature - ext_temperature
