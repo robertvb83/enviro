@@ -144,7 +144,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         calc_humidity_factor = ext_humidity / calc_adjusted_humidity
 
         # Save the values to a text file
-        append_to_calibration_file(temperature, calc_temp_offset, calc_adjusted_humidity, calc_humidity_factor)
+        append_to_calibration_file(temperature, calc_temp_offset, calc_adjusted_humidity, calc_humidity_factor, is_usb_power)
 
     # (only onboard sensor) Compensate for additional heating when on usb power - this also changes the
     # relative humidity value.
