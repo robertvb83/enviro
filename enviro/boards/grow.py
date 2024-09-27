@@ -15,15 +15,15 @@ from enviro import config
 temperature_points = [-20, -10, 0, 20, 30]
 temperature_offsets = [1, 1, 1, 1, 1]
 
-temperature_points_usb = [-20, -10, 0, 20, 28.6]
-temperature_offsets_usb = [1, 1, 1, 1, 1.7]
+temperature_points_usb = [-20, -10, 0, 20, 28.3, 28.6]
+temperature_offsets_usb = [1, 1, 1, 1, 1.37, 1.6]
 
 # For humidity factor
 humidity_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 humidity_factors = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
 
-humidity_points_usb = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-humidity_factors_usb = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
+humidity_points_usb = [0, 10, 20, 30, 40, 53.98, 60, 70, 80, 90, 100]
+humidity_factors_usb = [1, 1, 1, 1, 1, 1.02, 1, 1, 1, 1, 1]
 
 CHANNEL_NAMES = ["A", "B", "C"]
 
