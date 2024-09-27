@@ -15,9 +15,15 @@ from enviro import config
 temperature_points = [-20, -10, 0, 20, 30]
 temperature_offsets = [1, 1, 1, 1, 1]
 
+temperature_points_usb = [-20, -10, 0, 20, 28.6]
+temperature_offsets_usb = [1, 1, 1, 1, 1.7]
+
 # For humidity factor
 humidity_points = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 humidity_factors = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
+
+humidity_points_usb = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+humidity_factors_usb = [1, 1, 1, 1, 0.975, 0.975, 0.975, 0.975, 1, 1, 1]
 
 CHANNEL_NAMES = ["A", "B", "C"]
 
@@ -122,9 +128,12 @@ def water(moisture_levels):
 
 
 def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor, is_usb_power):
+    # Select the appropriate filename based on the power source
+    filename = "grow_calibration_data_usb.txt" if is_usb_power else "grow_calibration_data.txt"
+
     # Read existing data from the file
     try:
-        with open("grow_calibration_data.txt", "r") as f:
+        with open(filename, "r") as f:
             lines = f.readlines()
             if lines:
                 # Extracting the values safely
@@ -153,8 +162,9 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
     # Append the new values
     temperature_points.append(round(temperature, 2))
     if is_usb_power:
-        temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset,2 ))
-    temperature_offsets.append(round(temp_offset,2 ))
+        temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset, 2))
+    else:
+        temperature_offsets.append(round(temp_offset, 2))
     humidity_points.append(round(adjusted_humidity, 2))
     humidity_factors.append(round(humidity_factor, 2))
 
@@ -167,7 +177,7 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
     humidity_points, humidity_factors = zip(*humidity_sorted) if humidity_sorted else ([], [])
 
     # Save the updated arrays back to the file
-    with open("grow_calibration_data.txt", "w") as f:
+    with open(filename, "w") as f:
         f.write(f"temperature_points = {list(temperature_points)}\n")
         f.write(f"temperature_offsets = {list(temperature_offsets)}\n")
         f.write(f"humidity_points = {list(humidity_points)}\n")
@@ -218,7 +228,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         append_to_calibration_file(temperature, calc_temp_offset, calc_adjusted_humidity, calc_humidity_factor, is_usb_power)
     
     if is_usb_power:
-        usb_offset = helpers.interpolate(temperature, temperature_points, temperature_offsets) + config.usb_power_temperature_offset
+        usb_offset = helpers.interpolate(temperature, temperature_points_usb, temperature_offsets_usb) + config.usb_power_temperature_offset
         adjusted_temperature = temperature - usb_offset
     else:
         # Get sliding offset based on temperature
@@ -229,7 +239,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     adjusted_humidity = helpers.absolute_to_relative_humidity(absolute_humidity, adjusted_temperature, pressure)
     temperature = adjusted_temperature
 
-    humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points, humidity_factors)
+    if is_usb_power:
+        humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points_usb, humidity_factors_usb)
+    else:
+        humidity_factor = helpers.interpolate(adjusted_humidity, humidity_points, humidity_factors)
     humidity = humidity_factor * adjusted_humidity  # Adjust humidity with correction factor
 
     # Calculate external absolute humidity using helpers
