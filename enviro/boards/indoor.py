@@ -91,6 +91,8 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
 
     # Append the new values
     temperature_points.append(round(temperature, 2))
+    if is_usb_power:
+        temperature_offsets.append(round(temp_offset - config.usb_power_temperature_offset,2 ))
     temperature_offsets.append(round(temp_offset,2 ))
     humidity_points.append(round(adjusted_humidity, 2))
     humidity_factors.append(round(humidity_factor, 2))
