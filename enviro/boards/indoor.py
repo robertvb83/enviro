@@ -75,7 +75,7 @@ def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humi
                 temperature_offsets = []
                 humidity_points = []
                 humidity_factors = []
-    except FileNotFoundError:
+    except OSError:
         temperature_points = []
         temperature_offsets = []
         humidity_points = []
