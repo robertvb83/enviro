@@ -121,7 +121,7 @@ def water(moisture_levels):
                 time.sleep(0.5)
 
 
-def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor):
+def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor, is_usb_power):
     # Read existing data from the file
     try:
         with open("grow_calibration_data.txt", "r") as f:
@@ -215,7 +215,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         calc_humidity_factor = ext_humidity / calc_adjusted_humidity
 
         # Save the values to a text file
-        append_to_calibration_file(temperature, calc_temp_offset, calc_adjusted_humidity, calc_humidity_factor)
+        append_to_calibration_file(temperature, calc_temp_offset, calc_adjusted_humidity, calc_humidity_factor, is_usb_power)
     
     if is_usb_power:
         usb_offset = helpers.interpolate(temperature, temperature_points, temperature_offsets) + config.usb_power_temperature_offset
