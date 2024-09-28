@@ -12,18 +12,18 @@ from enviro import config
 # temperature and humidity correction array definitions
 
 # For temperature offset
-temperature_points = [-20, -10, 0, 20, 23, 30]
-temperature_offsets = [1, 1, 1, 1, 1.1, 1.2]
+temperature_points = [-20, -10, 0, 20, 23.15, 23.3, 30]
+temperature_offsets = [0.86, 0.86, 0.86, 0.86, 0.86, 0.9, 0.95]
 
-temperature_points_usb = [-20, -10, 0, 20, 28.3, 28.6]
-temperature_offsets_usb = [1, 1, 1, 1, 1.37, 1.6]
+temperature_points_usb = [-20, -10, 0, 20, 29.41, 29.43]
+temperature_offsets_usb = [1, 1, 1.5, 2, 2.84, 2.87]
 
 # For humidity factor
-humidity_points = [-20, -10, 0, 20, 30] # as Temperature
-humidity_factors = [1, 1, 1, 0.975, 1]
+humidity_points = [-20, -10, 0, 20, 25, 30] # as Temperature
+humidity_factors = [0.99, 0.99, 0.99, 0.99, 0.99, 0.99]
 
-humidity_points_usb = [-20, -10, 0, 20, 30] # as Temperature
-humidity_factors_usb = [1, 1, 1, 0.975, 1]
+humidity_points_usb = [-20, -10, 0, 20, 29.41, 29.43] # as Temperature
+humidity_factors_usb = [1, 1, 1, 0.975, 1.04, 1.02]
 
 CHANNEL_NAMES = ["A", "B", "C"]
 
