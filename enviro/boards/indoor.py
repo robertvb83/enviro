@@ -10,18 +10,18 @@ from enviro import i2c
 # temperature and humidity array definitions
 
 # For temperature offset
-temperature_points = [-20, -10, 20, 23.5, 30]
-temperature_offsets = [1, 1, 1.1, 1.55, 2]
+temperature_points = [-20, -10, 20.6, 23, 23.5, 30]
+temperature_offsets = [1.4, 1.4, 1.4, 1.2, 1.3, 1.5]
 
-temperature_points_usb = [-20, -10, 20, 23.5, 30]
-temperature_offsets_usb = [1, 1, 1.1, 1.55, 2]
+temperature_points_usb = [-20, -10, 20, 28.36, 30]
+temperature_offsets_usb = [1, 1, 1.1, 1.76, 2]
 
 # For humidity factor
-humidity_points = [-20, -10, 20, 23.5, 30] # as Temperature
-humidity_factors = [0.91, 0.93, 0.966, 0.966, 1]
+humidity_points = [-20, -10, 20, 23, 23.5, 30] # as Temperature
+humidity_factors = [0.966, 0.966, 0.966, 0.966, 0.966, 0.966]
 
-humidity_points_usb = [-20, -10, 20, 23.5, 30] # as Temperature
-humidity_factors_usb = [0.91, 0.93, 0.966, 0.966, 1]
+humidity_points_usb = [-20, -10, 20, 28.36, 30] # as Temperature
+humidity_factors_usb = [0.91, 0.93, 0.966, 0.94, 1]
 
 # Onboard BME688 sensor
 bme688 = BreakoutBME68X(i2c, address=0x77)
