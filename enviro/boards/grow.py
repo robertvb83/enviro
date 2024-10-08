@@ -8,6 +8,7 @@ from enviro import i2c
 from phew import logging
 import enviro.helpers as helpers  # Import helpers functions for calculations
 from enviro import config
+import os
 
 # temperature and humidity correction array definitions
 
