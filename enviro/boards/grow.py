@@ -1,4 +1,5 @@
 import time
+import json
 import math
 from breakout_bme280 import BreakoutBME280
 from breakout_ltr559 import BreakoutLTR559
@@ -9,6 +10,14 @@ from phew import logging
 import enviro.helpers as helpers  # Import helpers functions for calculations
 from enviro import config
 import os
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+STATUS_FILE = os.path.join(script_dir, "status.txt")  # Path to the status file
+
+CHANNEL_NAMES = ['A', 'B', 'C']
+DRY_MOISTURE_THRESHOLD = 20  # Define your threshold for dry moisture
+DRY_PHASE_DURATION = 86400  # 24 hours in seconds
 
 # temperature and humidity correction array definitions
 
@@ -89,41 +98,72 @@ def moisture_readings():
 
     return results
 
-
 # make a semi convincing drip noise
 def drip_noise():
     piezo_pwm.duty_u16(32768)
     for i in range(0, 10):
         f = i * 20
-        piezo_pwm.freq((f * f) + 1000)
+        piezo_pwm.freq((f * f) + 1000)      
         time.sleep(0.02)
     piezo_pwm.duty_u16(0)
 
+def read_status():
+    if os.path.exists(STATUS_FILE):
+        with open(STATUS_FILE, "r") as file:
+            status = file.read().strip()
+            return status
+    return None
+
+def write_status(status):
+    with open(STATUS_FILE, "w") as file:
+        file.write(status)
+
+def clear_status():
+    if os.path.exists(STATUS_FILE):
+        os.remove(STATUS_FILE)
 
 def water(moisture_levels):
     from enviro import config
 
-    targets = [
-        config.moisture_target_a,
-        config.moisture_target_b,
-        config.moisture_target_c,
+    min_targets = [
+        config.moisture_min_target_a,
+        config.moisture_min_target_b,
+        config.moisture_min_target_c,
     ]
+    max_targets = [
+        config.moisture_max_target_a,
+        config.moisture_max_target_b,
+        config.moisture_max_target_c,
+    ]
+    max_watering_time = 120  # Maximum watering time in seconds (2 minutes)
 
-    for i in range(0, 3):
-        if moisture_levels[i] < targets[i]:
-            # determine a duration to run the pump for
-            duration = round((targets[i] - moisture_levels[i]) / 25, 1)
+    for i in range(3):
+        status = read_status()
+        continue_watering = status and status.startswith(f"unfinished_{i}")
 
-            logging.info(f"> sensor {CHANNEL_NAMES[i]} below moisture target {targets[i]} (currently at {int(moisture_levels[i])}).")
+        if continue_watering or moisture_levels[i] < min_targets[i]:
+            logging.info(f"> sensor {CHANNEL_NAMES[i]} below minimum moisture target {min_targets[i]} (currently at {int(moisture_levels[i])}).")
 
             if config.auto_water:
-                logging.info(f"  - running pump {CHANNEL_NAMES[i]} for {duration} second(s)")
+                logging.info(f"  - starting pump {CHANNEL_NAMES[i]} until moisture reaches {max_targets[i]} or for a maximum of {max_watering_time} seconds")
                 pump_pins[i].value(1)
-                time.sleep(duration)
+                
+                start_time = time.time()
+                while read_moisture_levels()[i] < max_targets[i]:
+                    if time.time() - start_time > max_watering_time:
+                        logging.info(f"  - maximum watering time reached for pump {CHANNEL_NAMES[i]}")
+                        write_status(f"unfinished_{i}")
+                        break
+                    time.sleep(10)  # Check every 10 seconds (adjust as needed)
+                else:
+                    # Only clear the status if the loop completes without breaking
+                    clear_status()
+
                 pump_pins[i].value(0)
+                logging.info(f"  - stopped pump {CHANNEL_NAMES[i]}")
             else:
                 logging.info(f"  - playing beep")
-                for j in range(0, i + 1):
+                for j in range(i + 1):
                     drip_noise()
                 time.sleep(0.5)
 
@@ -285,12 +325,10 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         }
     )
 
-
 def play_tone(frequency=None):
     if frequency:
         piezo_pwm.freq(frequency)
         piezo_pwm.duty_u16(32768)
-
 
 def stop_tone():
     piezo_pwm.duty_u16(0)

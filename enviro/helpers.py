@@ -108,7 +108,7 @@ def get_saturation_vapor_pressure(temperature_in_k, pressure_in_hpa):
     a6 = 1.80122502
 
     return (f * CRITICAL_WATER_PRESSURE * math.exp(CRITICAL_WATER_TEMPERATURE / temperature_in_k * (a1 * v + a2 * v**1.5 + a3 * v**3 + a4 * v**3.5 + a5 * v**4 + a6 * v**7.5)))
-
+  
 
 # Dew point calculation using the Magnus formula
 def calculate_dew_point(temperature_in_c, relative_humidity):

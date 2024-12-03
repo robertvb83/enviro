@@ -197,7 +197,6 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     ext_dew_point = helpers.calculate_dew_point(ext_temperature, ext_humidity)
 
     from ucollections import OrderedDict
-
     return OrderedDict(
         {
             # Onboard sensor readings

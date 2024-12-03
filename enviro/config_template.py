@@ -53,5 +53,12 @@ moisture_target_a = 50
 moisture_target_b = 50
 moisture_target_c = 50
 
+moisture_min_target_a = 10
+moisture_min_target_b = 10
+moisture_min_target_c = 10
+moisture_max_target_a = 70
+moisture_max_target_b = 70
+moisture_max_target_c = 70
+
 # compensate for usb power
 usb_power_temperature_offset = 4.5
