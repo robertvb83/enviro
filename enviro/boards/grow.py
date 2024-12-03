@@ -256,7 +256,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     # https://forums.pimoroni.com/t/bme680-observed-gas-ohms-readings/6608/25
     ext_aqi = round(math.log(ext_gas_resistance) + 0.04 * ext_humidity, 1)
 
-    is_calibration = True
+    is_calibration = False
     if is_calibration:
         # calculate offset values for fitting
         calc_temp_offset = temperature - ext_temperature
