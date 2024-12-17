@@ -194,7 +194,7 @@ def water(moisture_levels):
                         logging.info(f"  - maximum watering time reached for pump {CHANNEL_NAMES[i]}")
                         write_status(i, f"unfinished_{i}")  # Update status to indicate unfinished
                         break
-                    time.sleep(1)  # Check every 1 seconds (adjust as needed)
+                    time.sleep(0.5)  # Check every 1 seconds (adjust as needed)
                 else:
                     # Only clear the status if the loop completes without breaking
                     clear_status(i)  # Clear the status of the current pump
