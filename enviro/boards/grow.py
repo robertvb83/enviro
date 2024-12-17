@@ -14,7 +14,6 @@ import os
 STATUS_FILE = "status.txt"
 
 CHANNEL_NAMES = ['A', 'B', 'C']
-DRY_MOISTURE_THRESHOLD = 20  # Define your threshold for dry moisture
 DRY_PHASE_DURATION = 86400  # 24 hours in seconds
 
 # temperature and humidity correction array definitions
@@ -105,29 +104,67 @@ def drip_noise():
         time.sleep(0.02)
     piezo_pwm.duty_u16(0)
 
+# Read status of all pumps
 def read_status():
     try:
         with open(STATUS_FILE, "r") as file:
-            return file.read().strip()
+            status_data = {}
+            for line in file:
+                line = line.strip()  # Remove leading/trailing whitespace
+                if ":" in line:  # Ensure that the line contains a colon
+                    try:
+                        pump_id, status = line.split(":", 1)  # Split into pump_id and status
+                        status_data[int(pump_id)] = status  # Store in the dictionary with pump_id as key
+                    except ValueError:
+                        continue  # Skip lines that can't be split properly
+            return status_data
     except OSError:
         # If the file doesn't exist, create it with empty content
         with open(STATUS_FILE, "w") as file:
             file.write("")  # Initialize with empty content
-        return None  # Return None after initializing
+        return {}  # Return an empty dictionary instead of None
 
-def write_status(status):
-    with open(STATUS_FILE, "w") as file:
-        file.write(status)
-
-def clear_status():
+# Write status for a specific pump
+def write_status(pump_id, status):
     try:
-        os.remove(STATUS_FILE)
+        # Read current status data (assuming read_status returns a dictionary)
+        status_data = read_status()
+
+        # If the status_data is None (no file or empty), initialize an empty dictionary
+        if status_data is None:
+            status_data = {}
+
+        # Update the status for the given pump_id
+        status_data[pump_id] = status
+
+        # Write updated statuses back to the file
+        with open(STATUS_FILE, "w") as file:
+            for pump_id, status in status_data.items():
+                file.write(f"{pump_id}:{status}\n")
+
     except OSError:
-        pass  # Ignore if the file doesn't exist
+        # If there's an OSError, initialize the status file with empty statuses 
+        with open(STATUS_FILE, "w") as file:
+            file.write("")  # Initialize with empty content
+
+# Clear the status of a specific pump
+def clear_status(pump_id):
+    try:
+        # Read current status data
+        status_data = read_status()
+
+        # If the pump exists, remove its status (set to empty)
+        if pump_id in status_data:
+            status_data[pump_id] = ""  # Set the pump's status to an empty string
+
+        # Write updated statuses back to the file, ignoring empty values
+        with open(STATUS_FILE, "w") as file:
+            # Only write non-empty statuses
+            file.write("\n".join(f"{key}:{value}" for key, value in status_data.items() if value) + "\n")
+    except OSError:
+        pass  # If the file doesn't exist, nothing needs to be done
 
 def water(moisture_levels):
-    from enviro import config
-
     min_targets = [
         config.moisture_min_target_a,
         config.moisture_min_target_b,
@@ -138,13 +175,13 @@ def water(moisture_levels):
         config.moisture_max_target_b,
         config.moisture_max_target_c,
     ]
-    max_watering_time = 120  # Maximum watering time in seconds (2 minutes)
+    max_watering_time = 15  # Maximum watering time in seconds (2 minutes)
 
     for i in range(3):
         status = read_status()
-        continue_watering = status and status.startswith(f"unfinished_{i}")
+        continue_watering = status.get(i) == f"unfinished_{i}" or moisture_levels[i] < min_targets[i]
 
-        if continue_watering or moisture_levels[i] < min_targets[i]:
+        if continue_watering:
             logging.info(f"> sensor {CHANNEL_NAMES[i]} below minimum moisture target {min_targets[i]} (currently at {int(moisture_levels[i])}).")
 
             if config.auto_water:
@@ -155,12 +192,12 @@ def water(moisture_levels):
                 while moisture_readings()[i] < max_targets[i]:
                     if time.time() - start_time > max_watering_time:
                         logging.info(f"  - maximum watering time reached for pump {CHANNEL_NAMES[i]}")
-                        write_status(f"unfinished_{i}")
+                        write_status(i, f"unfinished_{i}")  # Update status to indicate unfinished
                         break
-                    time.sleep(10)  # Check every 10 seconds (adjust as needed)
+                    time.sleep(1)  # Check every 1 seconds (adjust as needed)
                 else:
                     # Only clear the status if the loop completes without breaking
-                    clear_status()
+                    clear_status(i)  # Clear the status of the current pump
 
                 pump_pins[i].value(0)
                 logging.info(f"  - stopped pump {CHANNEL_NAMES[i]}")
@@ -169,7 +206,6 @@ def water(moisture_levels):
                 for j in range(i + 1):
                     drip_noise()
                 time.sleep(0.5)
-
 
 def append_to_calibration_file(temperature, temp_offset, adjusted_humidity, humidity_factor, is_usb_power):
     # Select the appropriate filename based on the power source
