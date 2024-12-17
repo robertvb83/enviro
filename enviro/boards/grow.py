@@ -149,7 +149,7 @@ def water(moisture_levels):
                 pump_pins[i].value(1)
                 
                 start_time = time.time()
-                while read_moisture_levels()[i] < max_targets[i]:
+                while moisture_readings()[i] < max_targets[i]:
                     if time.time() - start_time > max_watering_time:
                         logging.info(f"  - maximum watering time reached for pump {CHANNEL_NAMES[i]}")
                         write_status(f"unfinished_{i}")
