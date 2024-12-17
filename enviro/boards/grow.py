@@ -11,9 +11,7 @@ import enviro.helpers as helpers  # Import helpers functions for calculations
 from enviro import config
 import os
 
-# Get the directory of the current script
-script_dir = os.path.dirname(os.path.abspath(__file__))
-STATUS_FILE = os.path.join(script_dir, "status.txt")  # Path to the status file
+STATUS_FILE = "status.txt"
 
 CHANNEL_NAMES = ['A', 'B', 'C']
 DRY_MOISTURE_THRESHOLD = 20  # Define your threshold for dry moisture
@@ -108,19 +106,24 @@ def drip_noise():
     piezo_pwm.duty_u16(0)
 
 def read_status():
-    if os.path.exists(STATUS_FILE):
+    try:
         with open(STATUS_FILE, "r") as file:
-            status = file.read().strip()
-            return status
-    return None
+            return file.read().strip()
+    except OSError:
+        # If the file doesn't exist, create it with empty content
+        with open(STATUS_FILE, "w") as file:
+            file.write("")  # Initialize with empty content
+        return None  # Return None after initializing
 
 def write_status(status):
     with open(STATUS_FILE, "w") as file:
         file.write(status)
 
 def clear_status():
-    if os.path.exists(STATUS_FILE):
+    try:
         os.remove(STATUS_FILE)
+    except OSError:
+        pass  # Ignore if the file doesn't exist
 
 def water(moisture_levels):
     from enviro import config
