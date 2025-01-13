@@ -11,7 +11,7 @@ import enviro.helpers as helpers  # Import helpers functions for calculations
 from enviro import config
 import os
 
-STATUS_FILE = "status.txt"
+STATUS_FILE = "wtr_status.txt"
 
 CHANNEL_NAMES = ['A', 'B', 'C']
 DRY_PHASE_DURATION = 86400  # 24 hours in seconds
