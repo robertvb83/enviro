@@ -43,6 +43,25 @@ This fork enhances the [Enviro Grow board](https://shop.pimoroni.com/products/en
 USE_BOSS_SENSOR_LOGIC = True
 USE_BOSS_WATERING_LOGIC = True
 USE_BOSS_CALIBRATION = True
+```
+
+## Flowchart
+
+The following flowchart outlines the boss watering logic used when `USE_BOSS_WATERING_LOGIC = True`:
+
+![Boss Watering Flowchart](./A_flowchart_in_the_digital_diagram_visually_repres.png)
+
+---
+
+## Preserved Design
+
+- 🛡 **Original `helpers.py` fully untouched**
+- 🧼 **Minimal modifications to `grow.py`**
+- 🧩 **All added logic lives in `boss.py`**
+- 🧪 **Easily toggle new features at the top of `grow.py`**
+
+This makes the firmware fully backward-compatible and modular.
+
 
 ## About Enviro
 
