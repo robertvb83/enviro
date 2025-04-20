@@ -161,3 +161,63 @@ class BossHelpers:
             f.write(f"temperature_offsets = {list(to)}\n")
             f.write(f"humidity_points = {list(hp)}\n")
             f.write(f"humidity_factors = {list(hf)}\n")
+
+    # === Custom humidity/temperature helpers (pressure-aware) ===
+
+    @staticmethod
+    def relative_to_absolute_humidity_p(rh, temp_c, pressure_hpa):
+        temp_k = BossHelpers.celcius_to_kelvin(temp_c)
+        avp = BossHelpers.get_actual_vapor_pressure_p(rh, temp_k, pressure_hpa)
+        return avp / (WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temp_k)
+
+    @staticmethod
+    def absolute_to_relative_humidity_p(ah, temp_c, pressure_hpa):
+        temp_k = BossHelpers.celcius_to_kelvin(temp_c)
+        svp = BossHelpers.get_saturation_vapor_pressure_p(temp_k, pressure_hpa)
+        return ((WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temp_k * ah) / svp) * 100
+
+    @staticmethod
+    def celcius_to_kelvin(temp_c):
+        return temp_c + 273.15
+
+    @staticmethod
+    def get_actual_vapor_pressure_p(rh, temp_k, pressure_hpa):
+        return BossHelpers.get_saturation_vapor_pressure_p(temp_k, pressure_hpa) * (rh / 100)
+
+    @staticmethod
+    def get_saturation_vapor_pressure_p(temp_k, pressure_hpa):
+        v = 1 - (temp_k / CRITICAL_WATER_TEMPERATURE)
+        f = 1.00071 * math.exp(0.0000045 * pressure_hpa)  # Enhancement factor
+
+        a1, a2, a3 = -7.85951783, 1.84408259, -11.7866497
+        a4, a5, a6 = 22.6807411, -15.9618719, 1.80122502
+
+        return f * CRITICAL_WATER_PRESSURE * math.exp(
+            CRITICAL_WATER_TEMPERATURE / temp_k *
+            (a1*v + a2*v**1.5 + a3*v**3 + a4*v**3.5 + a5*v**4 + a6*v**7.5)
+        )
+
+    # === Your custom dew point logic (Magnus formula) ===
+
+    @staticmethod
+    def calculate_dew_point(temp_c, rh):
+        if temp_c >= 0:
+            K0, K1, K2 = 6.1094, 17.625, 243.04
+        else:
+            K0, K1, K2 = 6.1121, 22.587, 273.86
+        alpha = math.log(rh / 100.0) + (K1 * temp_c) / (K2 + temp_c)
+        return (K2 * alpha) / (K1 - alpha)
+
+    # === Your interpolation helper ===
+
+    @staticmethod
+    def interpolate(value, points, corrections):
+        if value <= points[0]:
+            return corrections[0]
+        elif value >= points[-1]:
+            return corrections[-1]
+        for i in range(1, len(points)):
+            if points[i - 1] <= value <= points[i]:
+                t1, t2 = points[i - 1], points[i]
+                c1, c2 = corrections[i - 1], corrections[i]
+                return c1 + (c2 - c1) * (value - t1) / (t2 - t1)
