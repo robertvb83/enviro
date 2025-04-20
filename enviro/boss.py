@@ -76,8 +76,23 @@ class Boss:
         delta_h = calc_h - corrected_h
 
         if self.sensor.calibrate:
-            BossHelpers.append_calibration(t, temp_offset, rel_h, hum_factor, is_usb)
-
+            # Use external sensor as reference
+            calc_temp_offset = t - ext["temperature"]
+            calc_adj_temp = t - calc_temp_offset
+        
+            calc_abs_h = BossHelpers.relative_to_absolute_humidity_p(h, t, p)
+            calc_adj_h = BossHelpers.absolute_to_relative_humidity_p(calc_abs_h, calc_adj_temp, p)
+        
+            calc_hum_factor = ext["humidity"] / calc_adj_h if calc_adj_h else 1.0
+        
+            BossHelpers.append_calibration(
+                t,
+                calc_temp_offset,
+                calc_adj_h,
+                calc_hum_factor,
+                is_usb
+            )
+            
         return {
             "temperature": round(adj_temp, 2),
             "humidity": round(corrected_h, 2),
