@@ -3,11 +3,11 @@
 import time, math, os
 from enviro import i2c
 from breakout_bme68x import BreakoutBME68X
-from enviro.helpers import *
 from phew import logging
+from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERATURE)
 
 # === Boss Settings ===
-MOISTURE_MIN = [10, 10, 10]
+MOISTURE_MIN = [0, 0, 0]
 MOISTURE_MAX = [70, 70, 70]
 STATUS_FILE = "wtr_status.txt"
 CHANNEL_NAMES = ["A", "B", "C"]
@@ -30,30 +30,29 @@ class Boss:
         self.sensor = BossSensor(calibrate=calibrate)
         self.status = BossWateringStatus()
 
-    def run_watering(self, moisture_levels, pump_pins):
+    def run_watering(self, moisture_levels, pump_pins, drip_noise=None):
         min_targets = MOISTURE_MIN
         max_targets = MOISTURE_MAX
         max_watering_time = 15
-    
+
         for i in range(3):
             status = self.status.get(i)
             continue_watering = status == f"unfinished_{i}" or moisture_levels[i] < min_targets[i]
-    
+
             if continue_watering:
                 logging.info(f"> sensor {CHANNEL_NAMES[i]} below minimum moisture target {min_targets[i]} (currently at {int(moisture_levels[i])}).")
-    
-                # Optional: support auto_water via config
+
                 try:
                     from enviro import config
                     auto_water = config.auto_water
                 except:
-                    auto_water = True  # fallback if config not available
-    
+                    auto_water = True
+
                 if auto_water:
                     logging.info(f"  - starting pump {CHANNEL_NAMES[i]} until moisture reaches {max_targets[i]} or for a maximum of {max_watering_time} seconds")
                     pump_pins[i].value(1)
-    
                     start_time = time.time()
+
                     while True:
                         current_level = moisture_readings()[i]
                         if current_level >= max_targets[i]:
@@ -64,15 +63,17 @@ class Boss:
                             self.status.set_unfinished(i)
                             break
                         time.sleep(0.5)
-    
+
                     pump_pins[i].value(0)
                     logging.info(f"  - stopped pump {CHANNEL_NAMES[i]}")
-    
                 else:
-                    logging.info(f"  - playing beep")
-                    for j in range(i + 1):
-                        drip_noise()
-                    time.sleep(0.5)
+                    logging.info(f"  - auto watering disabled")
+                    if drip_noise:
+                        for j in range(i + 1):
+                            drip_noise()
+                        time.sleep(0.5)
+                    else:
+                        logging.info(f"  - no drip_noise defined; skipping beep")
 
     def get_external_data(self, bme280_data, is_usb):
         t, p, h = bme280_data[0], bme280_data[1] / 100, bme280_data[2]
@@ -83,28 +84,25 @@ class Boss:
         hum_curve = HUM_CURVE_USB if is_usb else HUM_CURVE
         hum_factors = HUM_FACTORS_USB if is_usb else HUM_FACTORS
 
-        temp_offset = interpolate(t, temp_curve, temp_offsets)
+        temp_offset = BossHelpers.interpolate(t, temp_curve, temp_offsets)
         adj_temp = t - temp_offset
 
-        abs_h = relative_to_absolute_humidity(h, t, p)
-        rel_h = absolute_to_relative_humidity(abs_h, adj_temp, p)
-        hum_factor = interpolate(t, hum_curve, hum_factors)
+        abs_h = BossHelpers.relative_to_absolute_humidity_p(h, t, p)
+        rel_h = BossHelpers.absolute_to_relative_humidity_p(abs_h, adj_temp, p)
+        hum_factor = BossHelpers.interpolate(t, hum_curve, hum_factors)
         corrected_h = rel_h * hum_factor
 
-        ext_abs_h = relative_to_absolute_humidity(ext["humidity"], ext["temperature"], ext["pressure"])
-        calc_h = absolute_to_relative_humidity(ext_abs_h, adj_temp, ext["pressure"])
+        ext_abs_h = BossHelpers.relative_to_absolute_humidity_p(ext["humidity"], ext["temperature"], ext["pressure"])
+        calc_h = BossHelpers.absolute_to_relative_humidity_p(ext_abs_h, adj_temp, ext["pressure"])
         delta_h = calc_h - corrected_h
 
         if self.sensor.calibrate:
-            # Use external sensor as reference
             calc_temp_offset = t - ext["temperature"]
             calc_adj_temp = t - calc_temp_offset
-        
             calc_abs_h = BossHelpers.relative_to_absolute_humidity_p(h, t, p)
             calc_adj_h = BossHelpers.absolute_to_relative_humidity_p(calc_abs_h, calc_adj_temp, p)
-        
             calc_hum_factor = ext["humidity"] / calc_adj_h if calc_adj_h else 1.0
-        
+
             BossHelpers.append_calibration(
                 t,
                 calc_temp_offset,
@@ -112,19 +110,18 @@ class Boss:
                 calc_hum_factor,
                 is_usb
             )
-            
+
         return {
             "temperature": round(adj_temp, 2),
             "humidity": round(corrected_h, 2),
             "pressure": round(p, 2),
-            "dew_point": round(calculate_dew_point(adj_temp, corrected_h), 2),
-        
+            "dew_point": round(BossHelpers.calculate_dew_point(adj_temp, corrected_h), 2),
             "ext_temperature": round(ext["temperature"], 2),
             "ext_humidity": round(ext["humidity"], 2),
             "ext_pressure": round(ext["pressure"], 2),
             "ext_gas_resistance": round(ext["gas_resistance"]),
             "ext_aqi": round(math.log(ext["gas_resistance"]) + 0.04 * ext["humidity"], 1),
-            "ext_dew_point": round(calculate_dew_point(ext["temperature"], ext["humidity"]), 2),
+            "ext_dew_point": round(BossHelpers.calculate_dew_point(ext["temperature"], ext["humidity"]), 2),
             "calc_humidity": round(calc_h, 2),
             "delta_humidity": round(delta_h, 2),
         }
@@ -135,12 +132,12 @@ class BossSensor:
         self.calibrate = calibrate
 
     def read(self):
-        t, p, h, g = self.bme688.read()
+        data = self.bme688.read()
         return {
-            "temperature": t,
-            "pressure": p / 100.0,
-            "humidity": h,
-            "gas_resistance": g
+            "temperature": data[0],
+            "pressure": data[1] / 100.0,
+            "humidity": data[2],
+            "gas_resistance": data[3]
         }
 
 class BossWateringStatus:
@@ -180,42 +177,34 @@ class BossHelpers:
                 to = eval(lines[1].split("=")[1])
                 hp = eval(lines[2].split("=")[1])
                 hf = eval(lines[3].split("=")[1])
-        except SyntaxError as e:
-            print(f"Syntax error in calibration file: {e}")
+        except (SyntaxError, OSError):
             tp, to, hp, hf = [], [], [], []
-        except OSError:
-            tp, to, hp, hf = [], [], [], []
-    
-        # Append new values
+
         tp.append(round(temp, 2))
         to.append(round(offset, 2))
-        hp.append(round(temp, 2))  # x-axis = temperature
+        hp.append(round(temp, 2))
         hf.append(round(factor, 2))
-    
-        # Sort and unzip
+
         tp, to = zip(*sorted(zip(tp, to))) if tp else ([], [])
         hp, hf = zip(*sorted(zip(hp, hf))) if hp else ([], [])
-    
-        # Write back
+
         with open(fname, "w") as f:
             f.write(f"temperature_points = {list(tp)}\n")
             f.write(f"temperature_offsets = {list(to)}\n")
             f.write(f"humidity_points = {list(hp)}\n")
             f.write(f"humidity_factors = {list(hf)}\n")
 
-    # === Custom humidity/temperature helpers (pressure-aware) ===
-
     @staticmethod
-    def relative_to_absolute_humidity_p(rh, temp_c, pressure_hpa):
-        temp_k = BossHelpers.celcius_to_kelvin(temp_c)
-        avp = BossHelpers.get_actual_vapor_pressure_p(rh, temp_k, pressure_hpa)
-        return avp / (WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temp_k)
-
-    @staticmethod
-    def absolute_to_relative_humidity_p(ah, temp_c, pressure_hpa):
-        temp_k = BossHelpers.celcius_to_kelvin(temp_c)
-        svp = BossHelpers.get_saturation_vapor_pressure_p(temp_k, pressure_hpa)
-        return ((WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temp_k * ah) / svp) * 100
+    def interpolate(value, points, corrections):
+        if value <= points[0]:
+            return corrections[0]
+        if value >= points[-1]:
+            return corrections[-1]
+        for i in range(1, len(points)):
+            if points[i - 1] <= value <= points[i]:
+                t1, t2 = points[i - 1], points[i]
+                c1, c2 = corrections[i - 1], corrections[i]
+                return c1 + (c2 - c1) * (value - t1) / (t2 - t1)
 
     @staticmethod
     def celcius_to_kelvin(temp_c):
@@ -228,17 +217,24 @@ class BossHelpers:
     @staticmethod
     def get_saturation_vapor_pressure_p(temp_k, pressure_hpa):
         v = 1 - (temp_k / CRITICAL_WATER_TEMPERATURE)
-        f = 1.00071 * math.exp(0.0000045 * pressure_hpa)  # Enhancement factor
-
+        f = 1.00071 * math.exp(0.0000045 * pressure_hpa)
         a1, a2, a3 = -7.85951783, 1.84408259, -11.7866497
         a4, a5, a6 = 22.6807411, -15.9618719, 1.80122502
-
         return f * CRITICAL_WATER_PRESSURE * math.exp(
             CRITICAL_WATER_TEMPERATURE / temp_k *
             (a1*v + a2*v**1.5 + a3*v**3 + a4*v**3.5 + a5*v**4 + a6*v**7.5)
         )
 
-    # === Your custom dew point logic (Magnus formula) ===
+    @staticmethod
+    def relative_to_absolute_humidity_p(rh, temp_c, pressure_hpa):
+        temp_k = BossHelpers.celcius_to_kelvin(temp_c)
+        return BossHelpers.get_actual_vapor_pressure_p(rh, temp_k, pressure_hpa) / (WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temp_k)
+
+    @staticmethod
+    def absolute_to_relative_humidity_p(ah, temp_c, pressure_hpa):
+        temp_k = BossHelpers.celcius_to_kelvin(temp_c)
+        svp = BossHelpers.get_saturation_vapor_pressure_p(temp_k, pressure_hpa)
+        return (WATER_VAPOR_SPECIFIC_GAS_CONSTANT * temp_k * ah) / svp * 100
 
     @staticmethod
     def calculate_dew_point(temp_c, rh):
@@ -249,16 +245,3 @@ class BossHelpers:
         alpha = math.log(rh / 100.0) + (K1 * temp_c) / (K2 + temp_c)
         return (K2 * alpha) / (K1 - alpha)
 
-    # === Your interpolation helper ===
-
-    @staticmethod
-    def interpolate(value, points, corrections):
-        if value <= points[0]:
-            return corrections[0]
-        elif value >= points[-1]:
-            return corrections[-1]
-        for i in range(1, len(points)):
-            if points[i - 1] <= value <= points[i]:
-                t1, t2 = points[i - 1], points[i]
-                c1, c2 = corrections[i - 1], corrections[i]
-                return c1 + (c2 - c1) * (value - t1) / (t2 - t1)
