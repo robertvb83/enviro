@@ -79,6 +79,11 @@ class Boss:
             BossHelpers.append_calibration(t, temp_offset, rel_h, hum_factor, is_usb)
 
         return {
+            "temperature": round(adj_temp, 2),
+            "humidity": round(corrected_h, 2),
+            "pressure": round(p, 2),
+            "dew_point": round(calculate_dew_point(adj_temp, corrected_h), 2),
+        
             "ext_temperature": round(ext["temperature"], 2),
             "ext_humidity": round(ext["humidity"], 2),
             "ext_pressure": round(ext["pressure"], 2),
