@@ -1,10 +1,48 @@
-# Enviro MicroPython firmware <!-- omit in toc -->
+# Enviro MicroPython Firmware – Enhanced Fork 🪴  
+> Extending [Pimoroni’s original Enviro firmware](https://github.com/pimoroni/enviro) for advanced Grow use cases.
 
+---
+
+## Table of Contents <!-- omit in toc -->
+
+- [About This Fork](#about-this-fork)
+  - [Features](#features)
+  - [Flowchart](#flowchart)
+- [Preserved Design](#preserved-design)
 - [About Enviro](#about-enviro)
-- [Powering Enviro boards](#powering-enviro-boards)
-- [Supported products](#supported-products)
-- [Supported endpoints](#supported-endpoints)
+- [Powering Enviro Boards](#powering-enviro-boards)
+- [Supported Products](#supported-products)
+- [Supported Endpoints](#supported-endpoints)
 - [Documentation](#documentation)
+
+---
+
+## About This Fork
+
+This fork enhances the [Enviro Grow board](https://shop.pimoroni.com/products/enviro-grow) firmware with new functionality while preserving maximum compatibility with the original Pimoroni codebase.
+
+### Features
+
+🔧 **Modularized enhancements in `boss.py`**:
+- ✅ **Dry-phase watering logic**  
+  Replaces the default "maintain moisture" logic with a smarter dry/re-wet cycle using configurable `min/max` moisture levels and persistence status.
+
+- ✅ **External BME688 sensor support**  
+  Reads environmental data from an external BME688 (e.g. mounted near plants for better microclimate accuracy).
+
+- ✅ **Calibration & USB compensation**  
+  Automatically generates correction curves for temperature and humidity, adjusting internal BME280 readings using external sensor data.
+
+- ✅ **Custom helper functions**  
+  - Pressure-aware humidity calculations  
+  - Dew point using the Magnus formula  
+  - Generic interpolation utility
+
+🧪 **Feature toggles in `grow.py`**:
+```python
+USE_BOSS_SENSOR_LOGIC = True
+USE_BOSS_WATERING_LOGIC = True
+USE_BOSS_CALIBRATION = True
 
 ## About Enviro
 
