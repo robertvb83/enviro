@@ -49,7 +49,7 @@ USE_BOSS_CALIBRATION = True
 
 The following flowchart outlines the boss watering logic used when `USE_BOSS_WATERING_LOGIC = True`:
 
-![Boss Watering Flowchart](https://raw.githubusercontent.com/robertvb83/enviro/boss-mode/boss_watering_flowchart.png)
+<img src="https://raw.githubusercontent.com/robertvb83/enviro/boss-mode/boss_watering_flowchart.png" alt="Boss Watering Flowchart" width="50%">
 
 ---
 
