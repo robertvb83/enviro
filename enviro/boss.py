@@ -9,7 +9,6 @@ from phew import logging
 # === Boss Settings ===
 MOISTURE_MIN = [10, 10, 10]
 MOISTURE_MAX = [70, 70, 70]
-DRY_PHASE_DURATION = 86400  # 24 hours
 STATUS_FILE = "wtr_status.txt"
 CHANNEL_NAMES = ["A", "B", "C"]
 CAL_FILE = "grow_calibration_data.txt"
