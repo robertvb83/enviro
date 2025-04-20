@@ -83,7 +83,7 @@ class Boss:
         hum_curve = HUM_CURVE_USB if is_usb else HUM_CURVE
         hum_factors = HUM_FACTORS_USB if is_usb else HUM_FACTORS
 
-        temp_offset = interpolate(t, temp_curve, temp_offsets) + usb_offset
+        temp_offset = interpolate(t, temp_curve, temp_offsets)
         adj_temp = t - temp_offset
 
         abs_h = relative_to_absolute_humidity(h, t, p)
