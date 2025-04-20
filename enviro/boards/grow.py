@@ -2,7 +2,7 @@
 
 USE_BOSS_SENSOR_LOGIC = True
 USE_BOSS_WATERING_LOGIC = True
-USE_BOSS_CALIBRATION = True
+USE_BOSS_CALIBRATION = False
 
 import time
 import math
