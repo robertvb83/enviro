@@ -31,27 +31,49 @@ class Boss:
         self.sensor = BossSensor(calibrate=calibrate)
         self.status = BossWateringStatus()
 
-    def run_watering(self, moisture_levels, pump_pins):
-        for i in range(3):
-            now = time.time()
-            last = self.status.get(i)
-            needs_dryout = last is None or now - last >= DRY_PHASE_DURATION
-            if not needs_dryout:
-                logging.info(f"Skipping channel {CHANNEL_NAMES[i]} (still drying out)")
-                continue
+def run_watering(self, moisture_levels, pump_pins):
+    min_targets = MOISTURE_MIN
+    max_targets = MOISTURE_MAX
+    max_watering_time = 15
 
-            if moisture_levels[i] < MOISTURE_MIN[i]:
-                logging.info(f"Boss watering: {CHANNEL_NAMES[i]} low ({moisture_levels[i]} < {MOISTURE_MIN[i]})")
+    for i in range(3):
+        status = self.status.get(i)
+        continue_watering = status == f"unfinished_{i}" or moisture_levels[i] < min_targets[i]
+
+        if continue_watering:
+            logging.info(f"> sensor {CHANNEL_NAMES[i]} below minimum moisture target {min_targets[i]} (currently at {int(moisture_levels[i])}).")
+
+            # Optional: support auto_water via config
+            try:
+                from enviro import config
+                auto_water = config.auto_water
+            except:
+                auto_water = True  # fallback if config not available
+
+            if auto_water:
+                logging.info(f"  - starting pump {CHANNEL_NAMES[i]} until moisture reaches {max_targets[i]} or for a maximum of {max_watering_time} seconds")
                 pump_pins[i].value(1)
-                start = time.time()
-                while moisture_levels[i] < MOISTURE_MAX[i]:
-                    if time.time() - start > 15:
+
+                start_time = time.time()
+                while True:
+                    current_level = moisture_readings()[i]
+                    if current_level >= max_targets[i]:
+                        self.status.clear(i)
+                        break
+                    if time.time() - start_time > max_watering_time:
+                        logging.info(f"  - maximum watering time reached for pump {CHANNEL_NAMES[i]}")
                         self.status.set_unfinished(i)
                         break
                     time.sleep(0.5)
-                else:
-                    self.status.clear(i)
+
                 pump_pins[i].value(0)
+                logging.info(f"  - stopped pump {CHANNEL_NAMES[i]}")
+
+            else:
+                logging.info(f"  - playing beep")
+                for j in range(i + 1):
+                    drip_noise()
+                time.sleep(0.5)
 
     def get_external_data(self, bme280_data, is_usb):
         t, p, h = bme280_data[0], bme280_data[1] / 100, bme280_data[2]
