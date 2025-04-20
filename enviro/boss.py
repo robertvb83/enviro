@@ -62,7 +62,6 @@ class Boss:
         hum_curve = HUM_CURVE_USB if is_usb else HUM_CURVE
         hum_factors = HUM_FACTORS_USB if is_usb else HUM_FACTORS
 
-        usb_offset = 4.5 if is_usb else 0
         temp_offset = interpolate(t, temp_curve, temp_offsets) + usb_offset
         adj_temp = t - temp_offset
 
@@ -151,31 +150,37 @@ class BossWateringStatus:
 
 class BossHelpers:
     @staticmethod
-    def append_calibration(temp, offset, rel_h, factor, is_usb):
-        fname = CAL_FILE_USB if is_usb else CAL_FILE
-        try:
-            with open(fname, "r") as f:
-                lines = f.readlines()
-                tp = eval(lines[0].split("=")[1])
-                to = eval(lines[1].split("=")[1])
-                hp = eval(lines[2].split("=")[1])
-                hf = eval(lines[3].split("=")[1])
-        except:
-            tp, to, hp, hf = [], [], [], []
+def append_calibration(temp, offset, adjusted_humidity, factor, is_usb):
+    fname = CAL_FILE_USB if is_usb else CAL_FILE
+    try:
+        with open(fname, "r") as f:
+            lines = f.readlines()
+            tp = eval(lines[0].split("=")[1])
+            to = eval(lines[1].split("=")[1])
+            hp = eval(lines[2].split("=")[1])
+            hf = eval(lines[3].split("=")[1])
+    except SyntaxError as e:
+        print(f"Syntax error in calibration file: {e}")
+        tp, to, hp, hf = [], [], [], []
+    except OSError:
+        tp, to, hp, hf = [], [], [], []
 
-        tp.append(round(temp, 2))
-        to.append(round(offset, 2))
-        hp.append(round(temp, 2))
-        hf.append(round(factor, 2))
+    # Append new values
+    tp.append(round(temp, 2))
+    to.append(round(offset, 2))
+    hp.append(round(temp, 2))  # x-axis = temperature
+    hf.append(round(factor, 2))
 
-        tp, to = zip(*sorted(zip(tp, to)))
-        hp, hf = zip(*sorted(zip(hp, hf)))
+    # Sort and unzip
+    tp, to = zip(*sorted(zip(tp, to))) if tp else ([], [])
+    hp, hf = zip(*sorted(zip(hp, hf))) if hp else ([], [])
 
-        with open(fname, "w") as f:
-            f.write(f"temperature_points = {list(tp)}\n")
-            f.write(f"temperature_offsets = {list(to)}\n")
-            f.write(f"humidity_points = {list(hp)}\n")
-            f.write(f"humidity_factors = {list(hf)}\n")
+    # Write back
+    with open(fname, "w") as f:
+        f.write(f"temperature_points = {list(tp)}\n")
+        f.write(f"temperature_offsets = {list(to)}\n")
+        f.write(f"humidity_points = {list(hp)}\n")
+        f.write(f"humidity_factors = {list(hf)}\n")
 
     # === Custom humidity/temperature helpers (pressure-aware) ===
 
