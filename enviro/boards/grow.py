@@ -11,7 +11,7 @@ from enviro import i2c, config
 from phew import logging
 from breakout_bme280 import BreakoutBME280
 from breakout_ltr559 import BreakoutLTR559
-from enviro.helpers import calculate_dew_point
+from boss import BossHelpers
 from ucollections import OrderedDict
 from boss import Boss
 
@@ -124,7 +124,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     else:
         temp = bme_data[0]
         humid = bme_data[2]
-        dew = calculate_dew_point(temp, humid)
+        dew = BossHelpers.calculate_dew_point(temp, humid)
 
         readings = OrderedDict({
             "temperature": round(temp, 2),
