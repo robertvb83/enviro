@@ -4,6 +4,12 @@ USE_BOSS_SENSOR_LOGIC = True
 USE_BOSS_WATERING_LOGIC = True
 USE_BOSS_CALIBRATION = False
 
+import sys
+if "/" not in sys.path:
+    sys.path.append("/")
+
+from enviro.boss import Boss, BossHelpers
+
 import time
 import math
 from machine import Pin, PWM
@@ -11,9 +17,7 @@ from enviro import i2c, config
 from phew import logging
 from breakout_bme280 import BreakoutBME280
 from breakout_ltr559 import BreakoutLTR559
-from boss import BossHelpers
 from ucollections import OrderedDict
-from boss import Boss
 
 # === Boss init ===
 boss = Boss(calibrate=USE_BOSS_CALIBRATION)
@@ -96,7 +100,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
     # Watering logic (choose original or boss)
     if USE_BOSS_WATERING_LOGIC:
-        boss.run_watering(moisture, pump_pins)
+        boss.run_watering(moisture, pump_pins, drip_noise=drip_noise)
     else:
         water(moisture)
 
