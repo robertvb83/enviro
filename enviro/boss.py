@@ -30,7 +30,7 @@ class Boss:
         self.sensor = BossSensor(calibrate=calibrate)
         self.status = BossWateringStatus()
 
-    def run_watering(self, moisture_levels, pump_pins, drip_noise=None):
+    def run_watering(self, moisture_levels, pump_pins, drip_noise=None, read_moisture=None):
         from enviro import cache_upload, helpers
 
         min_targets = MOISTURE_MIN
@@ -62,7 +62,7 @@ class Boss:
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
                     
                     while True:
-                        current_level = moisture_readings()[i]
+                        current_level = read_moisture()[i]
                         if current_level >= max_targets[i]:
                             self.status.clear(i)
                             break
@@ -78,7 +78,7 @@ class Boss:
                     # Log pump OFF event
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
-                    self.log_moisture_and_pump(i, moisture_readings()[i], pump_state)
+                    self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
                 
                 else:
                     logging.info(f"  - auto watering disabled")
