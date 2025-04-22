@@ -123,7 +123,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             "dew_point": boss_data["dew_point"],
         })
         # Append the remaining boss readings
-        for key in ("temperature", "humidity", "dew_point"):
+        for key in ("temperature", "humidity", "pressure", "dew_point"):
             boss_data.pop(key, None)
         readings.update(boss_data)
 
