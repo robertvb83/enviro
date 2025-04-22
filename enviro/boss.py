@@ -79,6 +79,7 @@ class Boss:
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
+                    time.sleep(1) # avoid overwrite of cache file at the same second as next i status
                 
                 else:
                     logging.info(f"  - auto watering disabled")
