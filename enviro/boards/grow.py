@@ -100,7 +100,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
     # Watering logic (choose original or boss)
     if USE_BOSS_WATERING_LOGIC:
-        watered = boss.run_watering(moisture, pump_pins, drip_noise=drip_noise)
+        did_water = boss.run_watering(moisture, pump_pins, drip_noise=drip_noise)
         # Only re-read moisture for watered channels
         for i in range(3):
             if did_water[i]:
