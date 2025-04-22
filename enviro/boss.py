@@ -46,7 +46,7 @@ class Boss:
                 logging.info(f"> sensor {CHANNEL_NAMES[i]} below minimum moisture target {min_targets[i]} (currently at {int(moisture_levels[i])}).")
 
                 try:
-                    from enviro import config_template
+                    import config
                     auto_water = config.auto_water
                 except:
                     auto_water = True
