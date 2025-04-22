@@ -31,6 +31,8 @@ class Boss:
         self.status = BossWateringStatus()
 
     def run_watering(self, moisture_levels, pump_pins, drip_noise=None):
+        from enviro import cache_upload, helpers
+
         min_targets = MOISTURE_MIN
         max_targets = MOISTURE_MAX
         max_watering_time = 15
@@ -53,6 +55,10 @@ class Boss:
                     pump_pins[i].value(1)
                     start_time = time.time()
 
+                    # Log pump ON event
+                    pump_state = pump_pins[i].value()
+                    self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
+                    
                     while True:
                         current_level = moisture_readings()[i]
                         if current_level >= max_targets[i]:
@@ -66,6 +72,12 @@ class Boss:
 
                     pump_pins[i].value(0)
                     logging.info(f"  - stopped pump {CHANNEL_NAMES[i]}")
+
+                    # Log pump OFF event
+                    time.sleep(1)
+                    pump_state = pump_pins[i].value()
+                    self.log_moisture_and_pump(i, moisture_readings()[i], pump_state)
+                
                 else:
                     logging.info(f"  - auto watering disabled")
                     if drip_noise:
@@ -74,7 +86,19 @@ class Boss:
                         time.sleep(0.5)
                     else:
                         logging.info(f"  - no drip_noise defined; skipping beep")
+                        
+    def log_moisture_and_pump(self, i, moisture, pump_status):
+        from enviro import cache_upload
+        from ucollections import OrderedDict
+    
+        reading = OrderedDict({
+            f"moisture_{CHANNEL_NAMES[i].lower()}": round(moisture, 2),
+            f"pump_{CHANNEL_NAMES[i].lower()}": pump_status
+        })
 
+        logging.debug(f"  - caching moisture and pump status for channel {CHANNEL_NAMES[i]}")
+        cache_upload(reading)
+    
     def get_external_data(self, bme280_data, is_usb):
         t, p, h = bme280_data[0], bme280_data[1] / 100, bme280_data[2]
         ext = BossSensor().read()
