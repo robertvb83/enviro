@@ -101,9 +101,12 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
     # Watering logic (choose original or boss)
     if USE_BOSS_WATERING_LOGIC:
         watered = boss.run_watering(moisture, pump_pins, drip_noise=drip_noise)
-        if watered:
-            moisture = moisture_readings()
+        # Only re-read moisture for watered channels
+        for i in range(3):
+            if did_water[i]:
+                moisture[i] = moisture_readings()[i]
     else:
+        did_water = [False, False, False]
         water(moisture)
 
     press = bme_data[1] / 100.0
@@ -117,15 +120,20 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             "humidity": boss_data["humidity"],
             "pressure": boss_data["pressure"],
             "luminance": round(ltr_lux, 2),
-            "moisture_a": round(moisture[0], 2),
-            "moisture_b": round(moisture[1], 2),
-            "moisture_c": round(moisture[2], 2),
+            "moisture_a": round(moisture[0], 2) if not did_water[0] else None,
+            "moisture_b": round(moisture[1], 2) if not did_water[1] else None,
+            "moisture_c": round(moisture[2], 2) if not did_water[2] else None,
             "dew_point": boss_data["dew_point"],
         })
         # Append the remaining boss readings
         for key in ("temperature", "humidity", "pressure", "dew_point"):
             boss_data.pop(key, None)
         readings.update(boss_data)
+        
+        # Clean up None entries
+        for key in list(readings):
+            if readings[key] is None:
+                del readings[key]
 
     else:
         temp = bme_data[0]
