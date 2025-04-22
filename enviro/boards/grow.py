@@ -130,11 +130,6 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             boss_data.pop(key, None)
         readings.update(boss_data)
         
-        # Clean up None entries
-        for key in list(readings):
-            if readings[key] is None:
-                del readings[key]
-
     else:
         temp = bme_data[0]
         humid = bme_data[2]
@@ -145,10 +140,15 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
             "humidity": round(humid, 2),
             "pressure": round(press, 2),
             "luminance": round(ltr_lux, 2),
-            "moisture_a": round(moisture[0], 2),
-            "moisture_b": round(moisture[1], 2),
-            "moisture_c": round(moisture[2], 2),
+            "moisture_a": round(moisture[0], 2) if not did_water[0] else None,
+            "moisture_b": round(moisture[1], 2) if not did_water[1] else None,
+            "moisture_c": round(moisture[2], 2) if not did_water[2] else None,
             "dew_point": round(dew, 2),
         })
 
+    # Clean up None entries
+    for key in list(readings):
+        if readings[key] is None:
+            del readings[key]
+    
     return readings
