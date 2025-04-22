@@ -35,7 +35,8 @@ class Boss:
 
         min_targets = MOISTURE_MIN
         max_targets = MOISTURE_MAX
-        max_watering_time = 15
+        max_watering_time = 10
+        did_water = False  # Flag to track watering activity
 
         for i in range(3):
             status = self.status.get(i)
@@ -56,6 +57,7 @@ class Boss:
                     start_time = time.time()
 
                     # Log pump ON event
+                    did_water = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
                     
@@ -86,6 +88,7 @@ class Boss:
                         time.sleep(0.5)
                     else:
                         logging.info(f"  - no drip_noise defined; skipping beep")
+        return did_water
                         
     def log_moisture_and_pump(self, i, moisture, pump_status):
         from enviro import cache_upload
