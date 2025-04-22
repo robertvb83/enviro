@@ -100,7 +100,9 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
 
     # Watering logic (choose original or boss)
     if USE_BOSS_WATERING_LOGIC:
-        boss.run_watering(moisture, pump_pins, drip_noise=drip_noise)
+        watered = boss.run_watering(moisture, pump_pins, drip_noise=drip_noise)
+        if watered:
+            moisture = moisture_readings()
     else:
         water(moisture)
 
@@ -113,7 +115,7 @@ def get_sensor_readings(seconds_since_last, is_usb_power):
         readings = OrderedDict({
             "temperature": boss_data["temperature"],
             "humidity": boss_data["humidity"],
-            "pressure": round(press, 2),
+            "pressure": boss_data["pressure"],
             "luminance": round(ltr_lux, 2),
             "moisture_a": round(moisture[0], 2),
             "moisture_b": round(moisture[1], 2),
