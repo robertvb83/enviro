@@ -99,9 +99,11 @@ try:
 
   # Heartbeat from GPIO16 to ESP32 Pin 21 
   heartbeat_pin = Pin(16, Pin.OUT)
+  enviro.logging.info("sending Heartbeat to ESP Watchdog")
   heartbeat_pin.value(1)
   sleep_ms(50)
   heartbeat_pin.value(0)
+  enviro.logging.info("Heartbeat to ESP Watchdog successfully sent")
   
   # go to sleep until our next scheduled reading
   enviro.sleep()
