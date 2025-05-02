@@ -24,11 +24,10 @@
 # logging.disable_logging_types(logging.LOG_DEBUG)
 
 # Issue #117 where neeed to sleep on startup otherwis emight not boot
-from time import sleep
+from time import sleep, sleep_ms
 #sleep(0.5)
 sleep(2)
 from machine import Pin
-from time import sleep_ms
 
 # import enviro firmware, this will trigger provisioning if needed
 import enviro
