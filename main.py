@@ -25,7 +25,10 @@
 
 # Issue #117 where neeed to sleep on startup otherwis emight not boot
 from time import sleep
-sleep(0.5)
+#sleep(0.5)
+sleep(2)
+from machine import Pin
+from time import sleep_ms
 
 # import enviro firmware, this will trigger provisioning if needed
 import enviro
@@ -95,6 +98,12 @@ try:
     enviro.logging.debug(f"> saving reading locally")
     enviro.save_reading(reading)
 
+  # Heartbeat from GPIO16 to ESP32 Pin 21 
+  heartbeat_pin = Pin(16, Pin.OUT)
+  heartbeat_pin.value(1)
+  sleep_ms(50)
+  heartbeat_pin.value(0)
+  
   # go to sleep until our next scheduled reading
   enviro.sleep()
 
