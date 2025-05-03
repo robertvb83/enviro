@@ -9,21 +9,6 @@ from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERA
 from machine import Pin
 import time
 
-heartbeat_pin = Pin(17, Pin.OUT)
-
-def send_pump_pulse(channel: int, on: bool):
-    # Unique encoding per pump + state
-    short = 0.02
-    gap = 0.1
-    base = {0: 3, 1: 6, 2: 9}  # A, B, C base pulses for ON
-    count = base[channel] + (0 if on else 2)  # Add 2 if OFF
-
-    for _ in range(count):
-        heartbeat_pin.value(1)
-        time.sleep(short)
-        heartbeat_pin.value(0)
-        time.sleep(gap)
-
 # === Boss Settings ===
 MOISTURE_MIN = [20, 20, 0]
 MOISTURE_MAX = [70, 70, 70]
@@ -78,8 +63,7 @@ class Boss:
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
-                    send_pump_pulse(i, True)  # Pump ON
-                                        
+                                                            
                     while True:
                         current_level = read_moisture()[i]
                         if current_level >= max_targets[i]:
@@ -98,7 +82,6 @@ class Boss:
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
-                    send_pump_pulse(i, False)  # Pump OFF
                     time.sleep(1) # avoid overwrite of cache file at the same second as next i status
                 
                 else:
@@ -293,4 +276,3 @@ class BossHelpers:
             K0, K1, K2 = 6.1121, 22.587, 273.86
         alpha = math.log(rh / 100.0) + (K1 * temp_c) / (K2 + temp_c)
         return (K2 * alpha) / (K1 - alpha)
-
