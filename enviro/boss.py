@@ -90,7 +90,6 @@ class Boss:
                     else:
                         logging.info(f"  - no drip_noise defined; skipping beep")
         
-        self.mqtt.disconnect()
         return did_water
                         
     def log_moisture_and_pump(self, i, moisture, pump_status):
