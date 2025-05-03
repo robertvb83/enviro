@@ -5,10 +5,43 @@ from enviro import i2c
 from breakout_bme68x import BreakoutBME68X
 from phew import logging
 from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERATURE)
-from enviro.mqttsimple import MQTTClient
+
+from enviro import config
+from enviro import mqttsimple
+
+mqtt_client = None
+
+def init_mqtt():
+    global mqtt_client
+    try:
+        if mqtt_client is None:
+            mqtt_client = mqttsimple.MQTTClient(
+                client_id="enviro-grow",
+                server="192.168.178.108",  # or your broker IP (e.g. "192.168.178.100")
+                port=1883,
+                user="mqttuser",    # if needed
+                password="mqtt1234" # if needed
+            )
+            mqtt_client.connect()
+    except Exception as e:
+        from phew import logging
+        logging.error(f"> MQTT connect failed: {e}")
+        mqtt_client = None
+
+def publish_mqtt(topic, message):
+    global mqtt_client
+    from phew import logging
+    try:
+        if mqtt_client is None:
+            init_mqtt()
+        if mqtt_client:
+            mqtt_client.publish(topic, str(message))
+    except Exception as e:
+        logging.error(f"> MQTT publish failed: {e}")
+        mqtt_client = None
 
 # === Boss Settings ===
-MOISTURE_MIN = [0, 0, 0]
+MOISTURE_MIN = [20, 20, 0]
 MOISTURE_MAX = [70, 70, 70]
 STATUS_FILE = "wtr_status.txt"
 CHANNEL_NAMES = ["A", "B", "C"]
@@ -84,7 +117,7 @@ class Boss:
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
-                    self.publish_pump_status(i, True)  # after pump_pins[i].value(1)
+                    publish_mqtt(f"enviro/pump/{CHANNEL_NAMES[i].lower()}", "on" or "off")
                     
                     while True:
                         current_level = read_moisture()[i]
