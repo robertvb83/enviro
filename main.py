@@ -34,7 +34,18 @@ import enviro
 import os
 
 # heartbeat pin setup at global level
-from enviro.boss import heartbeat_pin
+heartbeat_pin = Pin(17, Pin.OUT, value=0)  # Start LOW
+def send_heartbeat():
+    print("\n---Start Heartbeat---")
+    print(f"Initial state: {heartbeat_pin.value()}")  # Should be 0
+    
+    heartbeat_pin.value(1)
+    print(f"After setting HIGH: {heartbeat_pin.value()}")  # Should be 1
+    sleep_ms(50)
+    
+    heartbeat_pin.value(0)
+    print(f"After setting LOW: {heartbeat_pin.value()}")  # Should be 0
+    print("---End Heartbeat---\n")
 
 try:
   # initialise enviro
@@ -99,12 +110,8 @@ try:
     enviro.logging.debug(f"> saving reading locally")
     enviro.save_reading(reading)
 
-  # Heartbeat from GPIO16 to ESP32 Pin 21 
-  enviro.logging.info("sending Heartbeat to ESP Watchdog")
-  heartbeat_pin.value(1)
-  sleep_ms(50)
-  heartbeat_pin.value(0)
-  enviro.logging.info("Heartbeat to ESP Watchdog successfully sent")
+  # Heartbeat from GPIO17 to ESP32 Pin 21 
+  send_heartbeat()
   
   # go to sleep until our next scheduled reading
   enviro.sleep()
