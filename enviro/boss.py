@@ -6,6 +6,29 @@ from breakout_bme68x import BreakoutBME68X
 from phew import logging
 from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERATURE)
 
+from machine import Pin
+import time
+
+status_pin = Pin(17, Pin.OUT)
+
+def send_pump_pulse(channel: int, on: bool):
+    # Example: Channel A ON = 1 short, 1 long; OFF = 1 short, 2 long
+    # Channel B ON = 2 short, 1 long; etc.
+    short = 0.02
+    long = 0.05
+    gap = 0.1
+
+    count = channel + 1
+    for _ in range(count):
+        pulse_pin.value(1)
+        time.sleep(short)
+        pulse_pin.value(0)
+        time.sleep(gap)
+
+    pulse_pin.value(1)
+    time.sleep(long if on else long * 2)
+    pulse_pin.value(0)
+
 # === Boss Settings ===
 MOISTURE_MIN = [20, 20, 0]
 MOISTURE_MAX = [70, 70, 70]
@@ -60,6 +83,7 @@ class Boss:
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
+                    send_pump_pulse(i, True)  # Pump ON
                                         
                     while True:
                         current_level = read_moisture()[i]
@@ -79,6 +103,7 @@ class Boss:
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
+                    send_pump_pulse(i, False)  # Pump OFF
                     time.sleep(1) # avoid overwrite of cache file at the same second as next i status
                 
                 else:
