@@ -63,30 +63,7 @@ class Boss:
     def __init__(self, calibrate=False):
         self.sensor = BossSensor(calibrate=calibrate)
         self.status = BossWateringStatus()
-        self.mqtt = None
-        try:
-            self.mqtt = MQTTClient(
-                client_id="enviro-pump",
-                server="localhost",  # or IP of MQTT broker
-                port=1883,
-                user="mqttuser",
-                password="mqtt1234"
-            )
-            self.mqtt.connect()
-        except Exception as e:
-            logging.error(f"> MQTT init failed: {e}")
-
-    def publish_pump_status(self, channel, state):
-        if not self.mqtt:
-            return
-        try:
-            topic = f"growbox/pump/{CHANNEL_NAMES[channel].lower()}"
-            payload = "ON" if state else "OFF"
-            self.mqtt.publish(topic, payload)
-            logging.debug(f"> MQTT: Published {payload} to {topic}")
-        except Exception as e:
-            logging.error(f"> MQTT publish failed: {e}")
-
+        
     def run_watering(self, moisture_levels, pump_pins, drip_noise=None, read_moisture=None):
         from enviro import cache_upload, helpers
 
