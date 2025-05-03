@@ -34,7 +34,7 @@ import enviro
 import os
 
 # heartbeat pin setup at global level
-heartbeat_pin = Pin(17, Pin.OUT, value=0)
+from enviro.boss import heartbeat_pin
 
 try:
   # initialise enviro
