@@ -9,7 +9,7 @@ from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERA
 from machine import Pin
 import time
 
-pulse_pin = Pin(17, Pin.OUT)
+heartbeat_pin = Pin(17, Pin.OUT)
 
 def send_pump_pulse(channel: int, on: bool):
     # Example: Channel A ON = 1 short, 1 long; OFF = 1 short, 2 long
@@ -20,14 +20,14 @@ def send_pump_pulse(channel: int, on: bool):
 
     count = channel + 1
     for _ in range(count):
-        pulse_pin.value(1)
+        heartbeat_pin.value(1)
         time.sleep(short)
-        pulse_pin.value(0)
+        heartbeat_pin.value(0)
         time.sleep(gap)
 
-    pulse_pin.value(1)
+    heartbeat_pin.value(1)
     time.sleep(long if on else long * 2)
-    pulse_pin.value(0)
+    heartbeat_pin.value(0)
 
 # === Boss Settings ===
 MOISTURE_MIN = [20, 20, 0]
