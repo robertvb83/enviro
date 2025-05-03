@@ -6,40 +6,6 @@ from breakout_bme68x import BreakoutBME68X
 from phew import logging
 from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERATURE)
 
-from enviro import config
-from enviro import mqttsimple
-
-mqtt_client = None
-
-def init_mqtt():
-    global mqtt_client
-    try:
-        if mqtt_client is None:
-            mqtt_client = mqttsimple.MQTTClient(
-                client_id="enviro-grow",
-                server="192.168.178.108",  # or your broker IP (e.g. "192.168.178.100")
-                port=1883,
-                user="mqttuser",    # if needed
-                password="mqtt1234" # if needed
-            )
-            mqtt_client.connect()
-    except Exception as e:
-        from phew import logging
-        logging.error(f"> MQTT connect failed: {e}")
-        mqtt_client = None
-
-def publish_mqtt(topic, message):
-    global mqtt_client
-    from phew import logging
-    try:
-        if mqtt_client is None:
-            init_mqtt()
-        if mqtt_client:
-            mqtt_client.publish(topic, str(message))
-    except Exception as e:
-        logging.error(f"> MQTT publish failed: {e}")
-        mqtt_client = None
-
 # === Boss Settings ===
 MOISTURE_MIN = [20, 20, 0]
 MOISTURE_MAX = [70, 70, 70]
@@ -94,8 +60,7 @@ class Boss:
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
-                    publish_mqtt(f"growbox/pump/{CHANNEL_NAMES[i].lower()}", "ON" if pump_state else "OFF")
-                    
+                                        
                     while True:
                         current_level = read_moisture()[i]
                         if current_level >= max_targets[i]:
@@ -114,7 +79,6 @@ class Boss:
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
-                    publish_mqtt(f"growbox/pump/{CHANNEL_NAMES[i].lower()}", "OFF")
                     time.sleep(1) # avoid overwrite of cache file at the same second as next i status
                 
                 else:
