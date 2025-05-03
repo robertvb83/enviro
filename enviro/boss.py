@@ -9,7 +9,7 @@ from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERA
 from machine import Pin
 import time
 
-status_pin = Pin(17, Pin.OUT)
+pulse_pin = Pin(17, Pin.OUT)
 
 def send_pump_pulse(channel: int, on: bool):
     # Example: Channel A ON = 1 short, 1 long; OFF = 1 short, 2 long
