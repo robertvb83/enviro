@@ -33,6 +33,8 @@ from machine import Pin
 import enviro
 import os
 
+# heartbeat pin setup at global level
+heartbeat_pin = Pin(17, Pin.OUT, value=0)
 
 try:
   # initialise enviro
@@ -98,7 +100,6 @@ try:
     enviro.save_reading(reading)
 
   # Heartbeat from GPIO16 to ESP32 Pin 21 
-  heartbeat_pin = Pin(16, Pin.OUT)
   enviro.logging.info("sending Heartbeat to ESP Watchdog")
   heartbeat_pin.value(1)
   sleep_ms(50)
