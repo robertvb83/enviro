@@ -12,13 +12,13 @@ import time
 heartbeat_pin = Pin(17, Pin.OUT)
 
 def send_pump_pulse(channel: int, on: bool):
-    # Example: Channel A ON = 1 short, 1 long; OFF = 1 short, 2 long
-    # Channel B ON = 2 short, 1 long; etc.
-    short = 0.02
-    long = 0.05
-    gap = 0.1
+    # Channel A = 1 short, B = 2, C = 3
+    short = 0.05  # 50ms — meets ESPHome debounce
+    gap = 0.05    # 50ms between pulses
+    long_on = 0.05    # 50ms for ON
+    long_off = 0.1    # 100ms for OFF
 
-    count = channel + 1
+    count = channel + 1  # A=1, B=2, C=3
     for _ in range(count):
         heartbeat_pin.value(1)
         time.sleep(short)
@@ -26,7 +26,7 @@ def send_pump_pulse(channel: int, on: bool):
         time.sleep(gap)
 
     heartbeat_pin.value(1)
-    time.sleep(long if on else long * 2)
+    time.sleep(long_on if on else long_off)
     heartbeat_pin.value(0)
 
 # === Boss Settings ===
