@@ -5,6 +5,7 @@ from enviro import i2c
 from breakout_bme68x import BreakoutBME68X
 from phew import logging
 from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERATURE)
+from enviro.mqttsimple import MQTTClient
 
 # === Boss Settings ===
 MOISTURE_MIN = [0, 0, 0]
@@ -29,6 +30,29 @@ class Boss:
     def __init__(self, calibrate=False):
         self.sensor = BossSensor(calibrate=calibrate)
         self.status = BossWateringStatus()
+        self.mqtt = None
+        try:
+            self.mqtt = MQTTClient(
+                client_id="enviro-pump",
+                server="localhost",  # or IP of MQTT broker
+                port=1883,
+                user="mqttuser",
+                password="mqtt1234"
+            )
+            self.mqtt.connect()
+        except Exception as e:
+            logging.error(f"> MQTT init failed: {e}")
+
+    def publish_pump_status(self, channel, state):
+        if not self.mqtt:
+            return
+        try:
+            topic = f"growbox/pump/{CHANNEL_NAMES[channel].lower()}"
+            payload = "ON" if state else "OFF"
+            self.mqtt.publish(topic, payload)
+            logging.debug(f"> MQTT: Published {payload} to {topic}")
+        except Exception as e:
+            logging.error(f"> MQTT publish failed: {e}")
 
     def run_watering(self, moisture_levels, pump_pins, drip_noise=None, read_moisture=None):
         from enviro import cache_upload, helpers
@@ -60,6 +84,7 @@ class Boss:
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
+                    self.publish_pump_status(i, True)  # after pump_pins[i].value(1)
                     
                     while True:
                         current_level = read_moisture()[i]
@@ -79,6 +104,7 @@ class Boss:
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
+                    self.publish_pump_status(i, False)  # after pump_pins[i].value(0)
                     time.sleep(1) # avoid overwrite of cache file at the same second as next i status
                 
                 else:
@@ -89,6 +115,8 @@ class Boss:
                         time.sleep(0.5)
                     else:
                         logging.info(f"  - no drip_noise defined; skipping beep")
+        
+        self.mqtt.disconnect()
         return did_water
                         
     def log_moisture_and_pump(self, i, moisture, pump_status):
