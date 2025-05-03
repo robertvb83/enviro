@@ -94,7 +94,7 @@ class Boss:
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
-                    publish_mqtt(f"enviro/pump/{CHANNEL_NAMES[i].lower()}", "on" or "off")
+                    publish_mqtt(f"growbox/pump/{CHANNEL_NAMES[i].lower()}", "ON" if pump_state else "OFF")
                     
                     while True:
                         current_level = read_moisture()[i]
@@ -114,7 +114,7 @@ class Boss:
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
-                    self.publish_pump_status(i, False)  # after pump_pins[i].value(0)
+                    publish_mqtt(f"growbox/pump/{CHANNEL_NAMES[i].lower()}", "OFF")
                     time.sleep(1) # avoid overwrite of cache file at the same second as next i status
                 
                 else:
