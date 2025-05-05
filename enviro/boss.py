@@ -7,7 +7,32 @@ from phew import logging
 from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERATURE)
 
 from machine import Pin
-import time
+
+# pump pin setup at global level
+pump_pin = Pin(16, Pin.OUT, value=0)  # Start LOW
+def send_pump_pulse(pump_index: int, turn_on: bool):
+    """
+    Sends 1–6 pulses to ESP32 to indicate pump status:
+    1 pulse: pump 0 on
+    2 pulses: pump 0 off
+    3 pulses: pump 1 on
+    4 pulses: pump 1 off
+    ...
+    6 pulses: pump 2 off
+    """
+    pulse_count = pump_index * 2 + (1 if turn_on else 2)
+    print(f"\n--- Sending {pulse_count} pulse(s) for Pump {pump_index} {'ON' if turn_on else 'OFF'} ---")
+
+    short = 0.02  # 20ms pulse
+    gap = 0.1     # 100ms between pulses
+
+    for _ in range(pulse_count):
+        pump_pin.value(1)
+        time.sleep(short)
+        pump_pin.value(0)
+        time.sleep(gap)
+
+    print(f"--- Signal complete ---\n")
 
 # === Boss Settings ===
 MOISTURE_MIN = [20, 20, 0]
@@ -60,6 +85,7 @@ class Boss:
                     start_time = time.time()
 
                     # Log pump ON event
+                    send_pump_pulse(i, True)   # Pump ON
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
@@ -79,6 +105,7 @@ class Boss:
                     logging.info(f"  - stopped pump {CHANNEL_NAMES[i]}")
 
                     # Log pump OFF event
+                    send_pump_pulse(i, False)  # Pump OFF
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
