@@ -138,11 +138,7 @@ class Boss:
                     ### Needs Hardware Pin connected to watchdog esp32
                     # send_pump_pulse(i, True)   # Pump ON
                     ### END Hardware Pump status
-                    
-                    ### Pump Status Software
-                    send_soft_pump_status(i, True)
-                    ### End Pump status Software
-                    
+                                      
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
@@ -165,10 +161,6 @@ class Boss:
                     ### Needs Hardware Pin connected to watchdog esp32
                     # send_pump_pulse(i, False)  # Pump OFF
                     ### END Hardware Pump status
-                    
-                    ### Pump Status Software
-                    send_soft_pump_status(i, False)
-                    ### End Pump status Software
                     
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
