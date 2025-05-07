@@ -50,7 +50,8 @@ activity_led_timer = Timer(-1)
 activity_led_pulse_speed_hz = 1
 def activity_led_callback(t):
   # updates the activity led brightness based on a sinusoid seeded by the current time
-  brightness = (math.sin(time.ticks_ms() * math.pi * 2 / (1000 / activity_led_pulse_speed_hz)) * 40) + 60
+  # brightness = (math.sin(time.ticks_ms() * math.pi * 2 / (1000 / activity_led_pulse_speed_hz)) * 40) + 60
+  brightness = (math.sin(time.ticks_ms() * math.pi * 2 / (1000 / activity_led_pulse_speed_hz)) * 5) + 8
   value = int(pow(brightness / 100.0, 2.8) * 65535.0 + 0.5)
   activity_led_pwm.duty_u16(value)
 
@@ -421,7 +422,7 @@ def get_sensor_readings():
 def save_reading(readings):
   # open todays reading file and save readings
   helpers.mkdir_safe("readings")
-  readings_filename = f"readings/{helpers.date_string()}.csv"
+  readings_filename = f"readings/{helpers.datetime_file_string()}.txt"
   new_file = not helpers.file_exists(readings_filename)
   with open(readings_filename, "a") as f:
     if new_file:
@@ -522,6 +523,19 @@ def upload_readings():
     # Disconnect wifi
     import network
     logging.info("> Disconnecting wireless after upload")
+    ### Heartbeat
+    from enviro.boss import send_soft_heartbeat
+    #send_soft_heartbeat()
+    # Test sequence
+    print("Starting MQTT test...")
+    for i in range(3):
+        print(f"\nAttempt {i+1}")
+        if send_soft_heartbeat():
+            break
+        utime.sleep(2)
+    else:
+        print("All attempts failed")
+    ### End Heartbeat
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.disconnect()
@@ -644,3 +658,4 @@ def sleep(time_override=None):
 
   # reset the board
   machine.reset()
+
