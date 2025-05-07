@@ -33,6 +33,7 @@ from machine import Pin
 import enviro
 import os
 
+### Heartbeat via Pin connection to ESP watchdog
 # heartbeat pin setup at global level
 # heartbeat_pin = Pin(17, Pin.OUT, value=0)  # Start LOW
 def send_heartbeat():
@@ -46,37 +47,7 @@ def send_heartbeat():
     heartbeat_pin.value(0)
     print(f"After setting LOW: {heartbeat_pin.value()}")  # Should be 0
     print("---End Heartbeat---\n")
-
-import mqttsimple
-
-mqtt_client = None
-
-def init_mqtt():
-    global mqtt_client
-    try:
-        mqtt_client = mqttsimple.MQTTClient(
-            client_id="enviro-grow",
-            server="192.168.178.108",  # IP of your HA MQTT broker
-            port=1883,
-            user="youruser",
-            password="yourpassword"
-        )
-        mqtt_client.connect()
-    except Exception as e:
-        print(f"MQTT connect failed: {e}")
-        mqtt_client = None
-
-def send_soft_heartbeat():
-    global mqtt_client
-    if mqtt_client is None:
-        init_mqtt()
-    if mqtt_client:
-        try:
-            mqtt_client.publish("enviro/heartbeat", str(int(time.time())))
-            print("Heartbeat sent via MQTT")
-        except Exception as e:
-            print(f"MQTT publish failed: {e}")
-            mqtt_client = None
+### End Hardware Heartbeat
 
 try:
   # initialise enviro
@@ -143,7 +114,6 @@ try:
 
   # Heartbeat from GPIO17 to ESP32 Pin 21 
   # send_heartbeat()
-  send_soft_heartbeat()
   
   # go to sleep until our next scheduled reading
   enviro.sleep()
