@@ -51,8 +51,8 @@ def init_mqtt():
             client_id="enviro-grow",
             server="192.168.178.108",
             port=1883,
-            user="robertvb",
-            password="ha##1558",
+            user="username",
+            password="password",
             keepalive=60  # Add keepalive
         )
         mqtt_client.connect()
