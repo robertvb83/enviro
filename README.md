@@ -21,6 +21,8 @@
 
 This fork enhances the [Enviro Grow board](https://shop.pimoroni.com/products/enviro-grow) firmware with new functionality while preserving maximum compatibility with the original Pimoroni codebase.
 
+changed files: boss.py, main.py, config.py, mqttsimple.py, __init__.py
+
 ### Features
 
 🔧 **Modularized enhancements in `boss.py`**:
