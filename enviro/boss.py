@@ -8,6 +8,7 @@ from enviro.helpers import *  # for constants only (e.g., CRITICAL_WATER_TEMPERA
 
 from machine import Pin
 
+### Needs Hardware Pin connected to watchdog esp32
 # pump pin setup at global level
 # pump_pin = Pin(16, Pin.OUT, value=0)  # Start LOW
 def send_pump_pulse(pump_index: int, turn_on: bool):
@@ -33,6 +34,55 @@ def send_pump_pulse(pump_index: int, turn_on: bool):
         time.sleep(gap)
 
     print(f"--- Signal complete ---\n")
+### END Hardware Pump Status
+
+### Software Heartbeat via MQTT
+from enviro import mqttsimple
+import utime
+
+mqtt_client = None
+last_publish_time = 0
+
+def init_mqtt():
+    global mqtt_client
+    try:
+        print("Initializing MQTT connection...")
+        mqtt_client = mqttsimple.MQTTClient(
+            client_id="enviro-grow",
+            server="192.168.178.108",
+            port=1883,
+            user="robertvb",
+            password="ha##1558",
+            keepalive=60  # Add keepalive
+        )
+        mqtt_client.connect()
+        print("MQTT connected successfully!")
+        return True
+    except Exception as e:
+        print(f"MQTT connection failed: {str(e)}")
+        mqtt_client = None
+        return False
+
+def send_soft_heartbeat():
+    global mqtt_client, last_publish_time
+    
+    # Reconnect if no recent activity
+    if mqtt_client is None or (utime.time() - last_publish_time > 30):
+        init_mqtt()
+    
+    if mqtt_client:
+        try:
+            print("Publishing heartbeat...")
+            mqtt_client.publish("enviro/heartbeat", "1", qos=1)  # Explicit QoS
+            last_publish_time = utime.time()
+            print("Heartbeat published successfully")
+            return True
+        except Exception as e:
+            print(f"Publish failed: {str(e)}")
+            mqtt_client = None
+            return False
+    return False
+### END Software Hearbeat
 
 # === Boss Settings ===
 MOISTURE_MIN = [20, 20, 0]
@@ -85,7 +135,14 @@ class Boss:
                     start_time = time.time()
 
                     # Log pump ON event
+                    ### Needs Hardware Pin connected to watchdog esp32
                     # send_pump_pulse(i, True)   # Pump ON
+                    ### END Hardware Pump status
+                    
+                    ### Pump Status Software
+                    send_soft_pump_status(i, True)
+                    ### End Pump status Software
+                    
                     did_water[i] = True  # Mark that watering happened
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, moisture_levels[i], pump_state)
@@ -105,7 +162,14 @@ class Boss:
                     logging.info(f"  - stopped pump {CHANNEL_NAMES[i]}")
 
                     # Log pump OFF event
+                    ### Needs Hardware Pin connected to watchdog esp32
                     # send_pump_pulse(i, False)  # Pump OFF
+                    ### END Hardware Pump status
+                    
+                    ### Pump Status Software
+                    send_soft_pump_status(i, False)
+                    ### End Pump status Software
+                    
                     time.sleep(1)
                     pump_state = pump_pins[i].value()
                     self.log_moisture_and_pump(i, read_moisture()[i], pump_state)
