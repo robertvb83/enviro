@@ -213,7 +213,7 @@ def reconnect_wifi(ssid, password, country, hostname=None):
         """Scan for all APs and return the strongest one matching our SSID."""
         networks = wlan.scan()
         best_ap = None
-        best_rssi = -100  # Initialize with minimum RSSI
+        best_rssi = getattr(config, 'wifi_min_rssi', -85)  # Configurable minimum RSSI
         
         for net in networks:
             try:
@@ -226,7 +226,9 @@ def reconnect_wifi(ssid, password, country, hostname=None):
                     best_rssi = net_rssi
             except:
                 continue
-                
+        
+        if best_ap is None:
+            logging.warning(f"> No APs found with RSSI > {best_rssi}dBm")
         return best_ap, best_rssi
 
     # Initialize WiFi
@@ -256,22 +258,25 @@ def reconnect_wifi(ssid, password, country, hostname=None):
         wlan.ifconfig((static_ip, subnet, gateway, dns))
         logging.info(f"> Using static IP: {static_ip}, DNS: {dns}")
 
-    # Connect with retries and AP roaming
-    retry_delays = [2, 3, 5, 8, 10, 15]  # Shorter delays for battery efficiency
+    # Configure retry behavior
+    retry_delays = getattr(config, 'wifi_retry_delays', [2, 3, 5, 8, 10, 15])
+    max_attempts = getattr(config, 'wifi_max_retries', len(retry_delays))
     last_best_ap = None
     
-    for attempt, delay in enumerate(retry_delays):
+    for attempt in range(max_attempts):
         try:
+            delay = retry_delays[attempt] if attempt < len(retry_delays) else retry_delays[-1]
+            
             # Find strongest AP on each attempt (unless we just tried it)
             best_ap, best_rssi = find_strongest_ap()
             
             if not best_ap:
-                raise Exception("No APs found with SSID: " + ssid)
+                raise Exception(f"No APs found with RSSI > {getattr(config, 'wifi_min_rssi', -85)}dBm")
                 
             if best_ap == last_best_ap and attempt > 0:
                 logging.info(f"> Re-trying best AP (RSSI: {best_rssi}dBm)")
             else:
-                logging.info(f"> Attempt {attempt + 1}: Connecting to AP (RSSI: {best_rssi}dBm)")
+                logging.info(f"> Attempt {attempt + 1}/{max_attempts}: Connecting to AP (RSSI: {best_rssi}dBm)")
                 last_best_ap = best_ap
             
             # Convert BSSID back to bytes
@@ -287,12 +292,18 @@ def reconnect_wifi(ssid, password, country, hostname=None):
                 
         except Exception as e:
             logging.error(f"! Attempt {attempt + 1} failed: {str(e)}")
-        
-        if attempt < len(retry_delays) - 1:
-            time.sleep(delay)
+            
+            # Final fallback - reset network hardware
+            if attempt == max_attempts - 1:
+                logging.warn("> Resetting network stack as last resort")
+                wlan.active(False)
+                time.sleep(1)
+                wlan.active(True)
+            
+            if attempt < max_attempts - 1:
+                time.sleep(delay)
 
-    raise Exception(f"Failed to connect after {len(retry_delays)} attempts")
-
+    raise Exception(f"Failed to connect after {max_attempts} attempts")
 def connect_to_wifi():
     try:
         logging.info(f"> Connecting to WiFi: '{config.wifi_ssid}'")
