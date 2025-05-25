@@ -18,8 +18,9 @@ wifi_gateway = "192.168.178.1"
 wifi_dns = "192.168.178.8"  # Your Pi-hole DNS
 # WiFi Connection Settings
 wifi_min_rssi = -80        # Minimum signal strength to consider (-80dBm is good)
-wifi_max_retries = 6       # Total connection attempts
-wifi_retry_delays = [2, 3, 5, 8, 10, 15]  # Seconds between attempts
+wifi_max_retries = 4       # Total connection attempts
+wifi_retry_delays = [3, 5, 8, 10]  # Seconds between attempts
+wifi_timeout = 10         # Longer timeout
 
 # how often to wake up and take a reading (in minutes)
 reading_frequency = 15
