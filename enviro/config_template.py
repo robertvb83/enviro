@@ -11,7 +11,11 @@ nickname = None
 # network access details
 wifi_ssid = None
 wifi_password = None
-wifi_country = "GB"
+wifi_country = "DE"
+wifi_static_ip = "192.168.178.122"  # Reserved in Fritz!Box
+wifi_subnet = "255.255.255.0"
+wifi_gateway = "192.168.178.1"
+wifi_dns = "192.168.178.8"  # Your Pi-hole DNS
 
 # how often to wake up and take a reading (in minutes)
 reading_frequency = 15
