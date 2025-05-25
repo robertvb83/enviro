@@ -157,153 +157,134 @@ print("")
 def reconnect_wifi(ssid, password, country, hostname=None):
     import time
     import network
-    import math
     import rp2
     import ubinascii
     
     start_ms = time.ticks_ms()
+    wlan = network.WLAN(network.STA_IF)
 
-    # Set country code (required for WiFi)
+    # Configuration with safe defaults
+    cfg = {
+        'min_rssi': -85,
+        'max_retries': 4,
+        'retry_delays': [3, 5, 8, 10],
+        'timeout': 8,
+        'static_ip': None,
+        'subnet': '255.255.255.0',
+        'gateway': '192.168.178.1',
+        'dns': '192.168.178.8'
+    }
+    
+    # Apply config overrides
+    for key in cfg:
+        if hasattr(config, f'wifi_{key}'):
+            cfg[key] = getattr(config, f'wifi_{key}')
+
+    # Initialize WiFi
     rp2.country(country)
+    wlan.active(True)
+    wlan.config(pm=0xA11140)  # Disable power management
 
-    # Set hostname (default to "EnviroW-<last 4 chars of MAC>")
+    # Set hostname
     if hostname is None:
         hostname = f"EnviroW-{helpers.uid()[-4:]}"
     network.hostname(hostname)
 
-    # WiFi status codes (from Pico W datasheet)
-    CYW43_LINK_DOWN = 0
-    CYW43_LINK_JOIN = 1
-    CYW43_LINK_NOIP = 2
-    CYW43_LINK_UP = 3
-    CYW43_LINK_FAIL = -1
-    CYW43_LINK_NONET = -2
-    CYW43_LINK_BADAUTH = -3
-
-    status_names = {
-        CYW43_LINK_DOWN: "Link is down",
-        CYW43_LINK_JOIN: "Connected to WiFi",
-        CYW43_LINK_NOIP: "Connected but no IP",
-        CYW43_LINK_UP: "Connected with IP",
-        CYW43_LINK_FAIL: "Connection failed",
-        CYW43_LINK_NONET: "No SSID found (out of range)",
-        CYW43_LINK_BADAUTH: "Authentication failed",
-    }
-
-    wlan = network.WLAN(network.STA_IF)
-
-    def dump_status():
-        """Log current WiFi status."""
-        status = wlan.status()
-        logging.info(f"> WiFi active: {wlan.active()}, status: {status} ({status_names.get(status, 'Unknown')})")
-        return status
-
-    def wait_status(expected_status, timeout=10, tick_sleep=0.5):
-        """Wait for a specific WiFi status with retries."""
-        for _ in range(math.ceil(timeout / tick_sleep)):
-            time.sleep(tick_sleep)
-            status = dump_status()
-            if status == expected_status:
-                return True
-            if status < 0:  # Error state
-                raise Exception(status_names[status])
-        return False
-
-    def find_strongest_ap():
-        """Scan for all APs and return the strongest one matching our SSID."""
-        networks = wlan.scan()
-        best_ap = None
-        best_rssi = getattr(config, 'wifi_min_rssi', -85)  # Configurable minimum RSSI
-        
-        for net in networks:
-            try:
-                net_ssid = net[0].decode()
-                net_bssid = ubinascii.hexlify(net[1], ':').decode()
-                net_rssi = net[3]
-                
-                if net_ssid == ssid and net_rssi > best_rssi:
-                    best_ap = net_bssid
-                    best_rssi = net_rssi
-            except:
-                continue
-        
-        if best_ap is None:
-            logging.warning(f"> No APs found with RSSI > {best_rssi}dBm")
-        return best_ap, best_rssi
-
-    # Initialize WiFi
-    wlan.active(True)
-    
-    # Always disable power-saving (even on battery)
-    wlan.config(pm=0xA11140)  # Disable power management
-
-    # Log MAC address
-    mac = ubinascii.hexlify(wlan.config('mac'), ':').decode()
-    logging.info(f"> MAC: {mac}")
-
-    # Disconnect if partially connected
-    status = dump_status()
-    if status >= CYW43_LINK_JOIN and status < CYW43_LINK_UP:
-        logging.info("> Cleaning up previous connection...")
-        wlan.disconnect()
-        if not wait_status(CYW43_LINK_DOWN, timeout=5):
-            logging.warn("  - Failed to disconnect cleanly")
-
     # Set static IP if configured
-    if hasattr(config, 'wifi_static_ip'):
-        static_ip = config.wifi_static_ip
-        subnet = config.wifi_subnet
-        gateway = config.wifi_gateway
-        dns = config.wifi_dns
-        wlan.ifconfig((static_ip, subnet, gateway, dns))
-        logging.info(f"> Using static IP: {static_ip}, DNS: {dns}")
+    if cfg['static_ip']:
+        wlan.ifconfig((cfg['static_ip'], cfg['subnet'], 
+                      cfg['gateway'], cfg['dns']))
 
-    # Configure retry behavior
-    retry_delays = getattr(config, 'wifi_retry_delays', [2, 3, 5, 8, 10, 15])
-    max_attempts = getattr(config, 'wifi_max_retries', len(retry_delays))
-    last_best_ap = None
-    
-    for attempt in range(max_attempts):
+    def scan_best_ap():
+        """Find strongest AP with minimum RSSI"""
         try:
-            delay = retry_delays[attempt] if attempt < len(retry_delays) else retry_delays[-1]
+            networks = wlan.scan()
+            best = {'bssid': None, 'rssi': cfg['min_rssi'], 'ssid': None}
             
-            # Find strongest AP on each attempt (unless we just tried it)
-            best_ap, best_rssi = find_strongest_ap()
+            for net in networks:
+                try:
+                    net_ssid = net[0].decode()
+                    if net_ssid == ssid and net[3] > best['rssi']:
+                        best = {
+                            'bssid': net[1],  # Keep as bytes
+                            'rssi': net[3],
+                            'ssid': net_ssid
+                        }
+                except Exception as e:
+                    logging.error(f"! Scan error: {e}")
+                    continue
+            
+            if not best['bssid']:
+                logging.warn(f"> No APs found with RSSI > {cfg['min_rssi']}dBm")
+            return best['bssid'], best['rssi']
+        except Exception as e:
+            logging.error(f"! Scan failed: {e}")
+            return None, -100
+
+    # Main connection loop
+    last_ap = None
+    for attempt in range(cfg['max_retries']):
+        try:
+            delay = cfg['retry_delays'][attempt] if attempt < len(cfg['retry_delays']) else cfg['retry_delays'][-1]
+            
+            # Scan for best AP (unless we already know there are none)
+            if last_ap is not False:  # False means previous scan found nothing
+                best_ap, best_rssi = scan_best_ap()
+                last_ap = best_ap or False
             
             if not best_ap:
-                raise Exception(f"No APs found with RSSI > {getattr(config, 'wifi_min_rssi', -85)}dBm")
-                
-            if best_ap == last_best_ap and attempt > 0:
-                logging.info(f"> Re-trying best AP (RSSI: {best_rssi}dBm)")
-            else:
-                logging.info(f"> Attempt {attempt + 1}/{max_attempts}: Connecting to AP (RSSI: {best_rssi}dBm)")
-                last_best_ap = best_ap
+                raise RuntimeError("No suitable APs found")
+
+            logging.info(f"> Attempt {attempt+1}: Connecting to {best_rssi}dBm AP")
             
-            # Convert BSSID back to bytes
-            bssid_bytes = ubinascii.unhexlify(best_ap.replace(':', ''))
-            wlan.connect(ssid, password, bssid=bssid_bytes)
+            # Force fresh connection state
+            wlan.disconnect()
+            time.sleep(1)
             
-            if wait_status(CYW43_LINK_UP, timeout=delay + 2):
-                ip = wlan.ifconfig()[0]
-                logging.info(f"> Connected! IP: {ip} (via {best_ap})")
-                elapsed_ms = time.ticks_ms() - start_ms
-                logging.info(f"> Connection time: {elapsed_ms}ms")
-                return elapsed_ms
+            # Connect with BSSID in bytes format
+            wlan.connect(ssid, password, bssid=best_ap)
+            
+            # Wait for connection with status checks
+            start = time.time()
+            while time.time() - start < cfg['timeout']:
+                status = wlan.status()
                 
+                if status == 3:  # CYW43_LINK_UP
+                    ip = wlan.ifconfig()[0]
+                    elapsed = time.ticks_ms() - start_ms
+                    logging.info(f"> Connected! IP: {ip} (in {elapsed}ms)")
+                    return elapsed
+                    
+                elif status in [-1, -2, -3]:  # Permanent failures
+                    raise RuntimeError([
+                        "Connection failed",
+                        "Network not found",
+                        "Auth failed"
+                    ][abs(status)-1])
+                
+                time.sleep(0.5)
+                
+            raise RuntimeError("Connection timeout")
+
         except Exception as e:
-            logging.error(f"! Attempt {attempt + 1} failed: {str(e)}")
+            error_msg = str(e)
+            logging.error(f"! Attempt {attempt+1} failed: {error_msg}")
             
-            # Final fallback - reset network hardware
-            if attempt == max_attempts - 1:
-                logging.warn("> Resetting network stack as last resort")
-                wlan.active(False)
-                time.sleep(1)
-                wlan.active(True)
-            
-            if attempt < max_attempts - 1:
+            # Special case: If we get "Network not found", skip remaining retries
+            if "Network not found" in error_msg:
+                break
+                
+            if attempt < cfg['max_retries'] - 1:
                 time.sleep(delay)
 
-    raise Exception(f"Failed to connect after {max_attempts} attempts")
+    # Final recovery attempt
+    logging.info("> Performing network reset...")
+    wlan.active(False)
+    time.sleep(2)
+    wlan.active(True)
+    
+    raise RuntimeError(f"Failed after {cfg['max_retries']} attempts. Last error: {error_msg}")
+  
 def connect_to_wifi():
     try:
         logging.info(f"> Connecting to WiFi: '{config.wifi_ssid}'")
@@ -324,6 +305,7 @@ def connect_to_wifi():
         return False
 
 # log the error, blink the warning led, and go back to sleep
+
 def halt(message):
   logging.error(message)
   warn_led(WARN_LED_BLINK)
